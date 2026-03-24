@@ -688,6 +688,31 @@ scaninit() {
 # -----------------------------
 # Buckup Service scan (BG)
 # -----------------------------
+# Use only after scaninit
+autorun() {
+  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ]; then
+    echo "[!] TARGET not set"
+    return 1
+  fi
+
+  if [ -z "$INIT_PORTS" ]; then
+    echo "[!] INIT_PORTS empty"
+    return 1
+  fi
+
+  local dir="$OUT/autorecon"
+  mkdir -p "$dir"
+
+  echo "[*] Starting autorecon (ports: $INIT_PORTS)"
+
+  autorecon "$TARGET_IP" \
+    -p "$INIT_PORTS" \
+    -o "$dir" \
+    > "$dir/autorecon.log" 2>&1 &
+
+  echo "[+] autorecon started (port-limited)"
+}
+
 # Use only after nmap_full.gnmap is complete
 autorun-full() {
   if [ -z "$TARGET_IP" ] || [ -z "$OUT" ]; then
@@ -696,8 +721,8 @@ autorun-full() {
   fi
 
   local gnmap="$OUT/nmap_full.gnmap"
-  local outdir="$OUT/autorecon_full"
-  local logfile="$outdir/autorecon_full.log"
+  local outdir="$OUT/autorecon"
+  local logfile="$outdir/autorecon.log"
 
   if [ ! -f "$gnmap" ]; then
     echo "[!] File not found: $gnmap"
@@ -719,7 +744,7 @@ autorun-full() {
   echo "[*] Output: $outdir"
   echo "[*] Log: $logfile"
 
-  nohup autorecon "$TARGET_IP" \
+  autorecon "$TARGET_IP" \
     -p "$ports" \
     -o "$outdir" \
     > "$logfile" 2>&1 &
@@ -1134,7 +1159,7 @@ nextsvc() {
 # -----------------------------
 # Buckup Config
 # -----------------------------
-buckconf() {
+backconf() {
   local base="$HOME/Vault/Cursor/40_Configs"
   local ts=$(date +%Y-%m-%d_%H-%M-%S)
   local dest="$base/$ts"
@@ -1175,4 +1200,57 @@ restoreconf() {
   echo "[+] Restore completed"
   echo "[!] Backup saved: $backup"
   echo "[!] Run: source ~/.zshrc"
+}
+
+# -----------------------------
+# Check Full Scan
+# -----------------------------
+fullcheck() {
+  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ] || [ -z "$LOG" ]; then
+    echo "[!] TARGET_IP / OUT / LOG is empty"
+    echo "    Run: target <IP> [NAME]"
+    return 1
+  fi
+
+  local full_base="$OUT/nmap_full"
+  local full_log="$LOG/nmap_full.log"
+  local full_nmap="${full_base}.nmap"
+  local init_nmap="${INIT_SCAN_SOURCE}.nmap"
+
+  if pgrep -af "nmap .* -p- .*${TARGET_IP}" >/dev/null 2>&1; then
+    echo "[*] Full scan is still running"
+    echo "[*] Progress:"
+    [ -f "$full_log" ] && tail -n 20 "$full_log" || echo "[!] Log file not found: $full_log"
+    return 0
+  fi
+
+  if [ ! -f "$full_nmap" ]; then
+    echo "[!] Full scan result not found: $full_nmap"
+    return 1
+  fi
+
+  echo "[*] Full scan completed"
+  echo
+  echo "[+] Open ports (full):"
+  grep -E "^[0-9]+/(tcp|udp)\s+open" "$full_nmap"
+
+  if [ -n "$INIT_SCAN_SOURCE" ] && [ -f "$init_nmap" ]; then
+    local delta
+    delta=$(
+      comm -13 \
+        <(grep -E "^[0-9]+/(tcp|udp)\s+open" "$init_nmap" | cut -d/ -f1 | sort -n) \
+        <(grep -E "^[0-9]+/(tcp|udp)\s+open" "$full_nmap" | cut -d/ -f1 | sort -n)
+    )
+
+    echo
+    echo "[+] Delta (found later than initial scan):"
+    if [ -n "$delta" ]; then
+      echo "$delta"
+    else
+      echo "None"
+    fi
+  else
+    echo
+    echo "[!] Initial scan source not found, skipping delta"
+  fi
 }

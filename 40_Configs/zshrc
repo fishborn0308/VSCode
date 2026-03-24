@@ -295,6 +295,8 @@ alias vpnip="ip -br -4 a show tun0 | awk '{print \$3}' | cut -d/ -f1"
 alias opentarget='xdg-open "$TARGET_DIR/$TARGET_IP.md"'
 alias arlog='tail -f $OUT/autorecon/autorecon.log'
 alias udp-open='grep -E "open|open\\|filtered" $OUT/nmap_udp_*.nmap 2>/dev/null'
+alias autorun='autorecon "$TARGET_IP" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon.log" 2>&1'
+alias autorun-full='autorecon "$TARGET_IP" -p "$INIT_PORTS" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon-full.log" 2>&1'
 
 # ----------------------------------------
 # Paths
@@ -683,48 +685,6 @@ scaninit() {
     > "$LOG/nmap_full.log" 2>&1 &
 
   echo "[+] Background full scan started"
-}
-
-# -----------------------------
-# Buckup Service scan (BG)
-# -----------------------------
-# Use only after nmap_full.gnmap is complete
-autorun-full() {
-  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ]; then
-    echo "[!] TARGET not set"
-    return 1
-  fi
-
-  local gnmap="$OUT/nmap_full.gnmap"
-  local outdir="$OUT/autorecon"
-  local logfile="$outdir/autorecon.log"
-
-  if [ ! -f "$gnmap" ]; then
-    echo "[!] File not found: $gnmap"
-    return 1
-  fi
-
-  local ports
-  ports=$(extract_ports_gnmap "$gnmap")
-
-  if [ -z "$ports" ]; then
-    echo "[!] No open ports found in: $gnmap"
-    return 1
-  fi
-
-  mkdir -p "$outdir"
-
-  echo "[*] Starting autorecon-full"
-  echo "[*] Ports: $ports"
-  echo "[*] Output: $outdir"
-  echo "[*] Log: $logfile"
-
-  nohup autorecon "$TARGET_IP" \
-    -p "$ports" \
-    -o "$outdir" \
-    > "$logfile" 2>&1 &
-
-  echo "[+] autorecon-full started"
 }
 
 # -----------------------------

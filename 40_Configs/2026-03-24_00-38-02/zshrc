@@ -696,8 +696,8 @@ autorun-full() {
   fi
 
   local gnmap="$OUT/nmap_full.gnmap"
-  local outdir="$OUT/autorecon_full"
-  local logfile="$outdir/autorecon_full.log"
+  local outdir="$OUT/autorecon"
+  local logfile="$outdir/autorecon.log"
 
   if [ ! -f "$gnmap" ]; then
     echo "[!] File not found: $gnmap"
