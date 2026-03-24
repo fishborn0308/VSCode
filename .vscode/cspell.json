@@ -1,0 +1,15 @@
+{
+  "language": "en,ja",
+  "ignoreRegExpList": [
+    "/^0x[a-fA-F0-9]+$/", 
+    "/[a-fA-F0-9]{32,}/", 
+    "/^192\\.168\\..*/" 
+  ],
+  "dictionaries": [
+    "softwareTerms", 
+    "node",
+    "python",
+    "bash",
+    "markdown"
+  ]
+}
