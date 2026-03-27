@@ -295,9 +295,9 @@ alias vpnip="ip -br -4 a show tun0 | awk '{print \$3}' | cut -d/ -f1"
 alias opentarget='xdg-open "$TARGET_DIR/$TARGET_IP.md"'
 alias arlog='tail -f $OUT/autorecon/autorecon.log'
 alias udp-open='grep -E "open|open\\|filtered" $OUT/nmap_udp_*.nmap 2>/dev/null'
-alias autorun='autorecon "$TARGET_IP" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon.log" 2>&1'
-alias autorun-full='autorecon "$TARGET_IP" -p "$INIT_PORTS" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon-full.log" 2>&1'
-
+alias ar='autorecon "$TARGET_IP" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon.log" 2>&1'
+alias ar_f_nmap='autorecon "$TARGET_IP" -p "$INIT_PORTS" -o "$OUT/autorecon_nmap" > "$OUT/autorecon_nmap/autorecon.log" 2>&1'
+alias ar_f_nmap_full='ports=$(extract_ports_gnmap "$OUT/nmap_full.gnmap"); autorecon "$TARGET_IP" -p "$ports" -o "$OUT/autorecon_full" > "$OUT/autorecon_full/autorecon.log" 2>&1'
 # ----------------------------------------
 # Paths
 # ----------------------------------------
@@ -436,7 +436,7 @@ target() {
   local ip="$1"
   local name="$2"
   local vault_base="$HOME/Vault/Target"
-  local template="$HOME/Vault/Obsidian/80_Templates/Target.md"
+  local template="$HOME/Vault/Obsidian/80_Templates/Template-Target.md"
 
   if [ -z "$ip" ]; then
     export TARGET_IP=""
@@ -454,9 +454,11 @@ target() {
 
   local target_dir="$vault_base/$ip"
   local note_file="$target_dir/${ip}.md"
-  local tag="# OSCP_TARGET"
+  local tag="# TARGET"
 
   mkdir -p "$target_dir/assets" "$target_dir/result/autorecon" "$target_dir/log"
+
+  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
 
   export TARGET_IP="$ip"
   export TARGET_NAME="$name"
@@ -549,7 +551,7 @@ EOF
 # target clear
 # -----------------------------
 targetcl() {
-  sudo sed -i '/# OSCP_TARGET/d' /etc/hosts
+  sudo sed -i '/# TARGET/d' /etc/hosts
 
   if [[ -n "$TARGET_DIR" && "$PWD" == "$TARGET_DIR"* ]]; then
     cd ~ || return
@@ -1188,4 +1190,111 @@ fullcheck() {
     echo
     echo "[!] Initial scan source not found, skipping delta"
   fi
+}
+# -----------------------------
+# Tmux session for infrastructure
+# -----------------------------
+infratmux() {
+  local session="infra"
+
+  if tmux has-session -t "$session" 2>/dev/null; then
+    echo "[*] Attaching: $session"
+    tmux attach -t "$session"
+    return
+  fi
+
+  echo "[*] Creating infra session"
+
+  tmux new-session -d -s "$session"
+
+  # --- ペイン構成 ---
+  tmux split-window -h -t "$session"
+  tmux split-window -v -t "$session:0.1"
+
+  # pane:
+  # 0: 左 (VPN / monitor)
+  # 1: 右上 (server)
+  # 2: 右下 (transfer)
+
+  # --- 左: VPN ---
+  tmux send-keys -t "$session:0.0" "cd ~" C-m
+  tmux send-keys -t "$session:0.0" "echo '[VPN / Monitor]'" C-m
+
+  # --- 右上: server ---
+  tmux send-keys -t "$session:0.1" "cd ~/Transfer" C-m
+  tmux send-keys -t "$session:0.1" "echo '[HTTP / Server]'" C-m
+
+  # --- 右下: transfer ---
+  tmux send-keys -t "$session:0.2" "cd ~/Transfer" C-m
+  tmux send-keys -t "$session:0.2" "echo '[Payload / Transfer]'" C-m
+
+  tmux select-pane -t "$session:0.0"
+
+  tmux attach -t "$session"
+}
+
+# -----------------------------
+# Tmux session for target
+# -----------------------------
+targettmux() {
+  local ip="$1"
+  local name="$2"
+
+  if [ -z "$ip" ]; then
+    echo "[!] Usage: targettmux <IP> [NAME]"
+    return 1
+  fi
+
+  # --- セッション名生成 ---
+  local last_octet="${ip##*.}"
+  local third_octet
+  third_octet=$(echo "$ip" | awk -F. '{print $(NF-1)}')
+
+  local safe_name=""
+  if [ -n "$name" ]; then
+    safe_name="${name// /_}"
+    safe_name="${safe_name//[^a-zA-Z0-9_-]/}"
+  fi
+
+  local session
+  if [ -n "$safe_name" ]; then
+    session="${safe_name}_${last_octet}"
+  else
+    session="t_${third_octet}_${last_octet}"
+  fi
+
+  # --- 既存セッション ---
+  if tmux has-session -t "$session" 2>/dev/null; then
+    echo "[*] Attaching: $session"
+    tmux attach -t "$session"
+    return
+  fi
+
+  echo "[*] Creating session: $session"
+
+  # --- 新規セッション ---
+  tmux new-session -d -s "$session"
+
+  # --- ペイン構成 ---
+  tmux split-window -h -t "$session"
+  tmux split-window -v -t "$session:0.1"
+
+  # pane:
+  # 0: 左 (scan)
+  # 1: 右上 (enum)
+  # 2: 右下 (notes)
+
+  # --- 左: scan ---
+  tmux send-keys -t "$session:0.0" "target $ip $name" C-m
+
+  # --- 右上: enum ---
+  tmux send-keys -t "$session:0.1" "cd ~/Workbench" C-m
+
+  # --- 右下: notes ---
+  tmux send-keys -t "$session:0.2" "cd \$TARGET_DIR 2>/dev/null || cd ~" C-m
+
+  # --- アクティブペイン ---
+  tmux select-pane -t "$session:0.0"
+
+  tmux attach -t "$session"
 }
