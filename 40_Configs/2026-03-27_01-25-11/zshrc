@@ -344,7 +344,7 @@ PROMPT='%F{cyan}[L: ${CURRENT_MY_IP}]%f %F{blue}%~%f %# '
 RPROMPT='${TARGET_STATUS}'
 
 # ----------------------------------------
-# Search helpers
+# Search helpers 
 # ----------------------------------------
 vault-grep() {
   grep -r --color=always -E "$1" ~/Vault/Target/
@@ -427,6 +427,160 @@ tmuxsync_precmd() {
 
 autoload -Uz add-zsh-hook
 add-zsh-hook precmd tmuxsync_precmd
+
+
+# -----------------------------
+# target
+# -----------------------------
+target() {
+  local ip="$1"
+  local name="$2"
+  local vault_base="$HOME/Vault/Target"
+  local template="$HOME/Vault/Obsidian/80_Templates/Template-Target.md"
+
+  if [ -z "$ip" ]; then
+    export TARGET_IP=""
+    export TARGET_NAME=""
+    export TARGET_DIR=""
+    export workdir=""
+    export OUT=""
+    export LOG=""
+    export ASSETS=""
+    export INIT_SCAN_SOURCE=""
+    export INIT_PORTS=""
+    echo "[!] Targeting has been removed."
+    return
+  fi
+
+  local target_dir="$vault_base/$ip"
+  local note_file="$target_dir/${ip}.md"
+  local tag="# TARGET"
+
+  mkdir -p "$target_dir/assets" "$target_dir/result/autorecon" "$target_dir/log"
+
+  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
+
+  export TARGET_IP="$ip"
+  export TARGET_NAME="$name"
+  export TARGET_DIR="$target_dir"
+  export workdir="$target_dir"
+  export OUT="$target_dir/result"
+  export LOG="$target_dir/log"
+  export ASSETS="$target_dir/assets"
+  export INIT_SCAN_SOURCE=""
+  export INIT_PORTS=""
+
+  if [ -n "$name" ]; then
+    sudo sed -i "\| $name $tag|d; \|^$ip |d" /etc/hosts
+    echo "$ip $name $tag" | sudo tee -a /etc/hosts > /dev/null
+  fi
+
+  if [ ! -f "$note_file" ]; then
+    if [ -f "$template" ]; then
+      cp "$template" "$note_file"
+      sed -i "s|<% tp.file.title %>|$ip|g" "$note_file"
+    else
+      echo "[!] Template missing: $template"
+      cat > "$note_file" <<EOF
+# $ip ${name:+($name)}
+
+## Target Info
+- IP: $ip
+- Hostname: ${name:-}
+
+---
+
+## Quick Start
+
+\`\`\`zsh
+target $ip ${name:-}
+scaninit
+\`\`\`
+
+---
+
+## Port Scan
+
+Primary: \`scaninit\`
+
+> If scaninit fails:
+> - Check \`\$TARGET_IP\`
+> - Check \`result/\`
+> - Check \`log/\`
+
+---
+
+## Open Ports
+-
+
+---
+
+## Notes
+-
+
+---
+
+## Next Actions
+-
+EOF
+    fi
+  fi
+
+  if [ -n "$TMUX" ]; then
+    tmux set-environment -g TARGET_IP "$ip"
+    tmux set-environment -g TARGET_NAME "$name"
+    tmux set-environment -g TARGET_DIR "$target_dir"
+    tmux set-environment -g OUT "$target_dir/result"
+    tmux set-environment -g LOG "$target_dir/log"
+    tmux set-environment -g ASSETS "$target_dir/assets"
+    tmux set-environment -g workdir "$target_dir"
+    tmux set-environment -g INIT_SCAN_SOURCE ""
+    tmux set-environment -g INIT_PORTS ""
+  fi
+
+  cd "$target_dir" || return
+
+  echo "----------------------------------------"
+  echo "Target Set & Moved to $target_dir"
+  echo "IP   : $TARGET_IP"
+  echo "FQDN : ${TARGET_NAME:-N/A}"
+  echo "----------------------------------------"
+}
+
+# -----------------------------
+# target clear
+# -----------------------------
+targetcl() {
+  sudo sed -i '/# TARGET/d' /etc/hosts
+
+  if [[ -n "$TARGET_DIR" && "$PWD" == "$TARGET_DIR"* ]]; then
+    cd ~ || return
+  fi
+
+  export TARGET_IP=""
+  export TARGET_NAME=""
+  export TARGET_DIR=""
+  export workdir=""
+  export OUT=""
+  export LOG=""
+  export ASSETS=""
+  export INIT_SCAN_SOURCE=""
+  export INIT_PORTS=""
+
+  if [ -n "$TMUX" ]; then
+    tmux set-environment -gu TARGET_IP
+    tmux set-environment -gu TARGET_NAME
+    tmux set-environment -gu TARGET_DIR
+    tmux set-environment -gu OUT
+    tmux set-environment -gu LOG
+    tmux set-environment -gu ASSETS
+    tmux set-environment -gu workdir
+    tmux set-environment -gu INIT_SCAN_SOURCE
+    tmux set-environment -gu INIT_PORTS
+  fi
+
+  echo "[!] Target cleared."
+}
 
 # -----------------------------
 # scan helper
@@ -1080,131 +1234,16 @@ infratmux() {
 }
 
 # -----------------------------
-# target
-# -----------------------------
-target() {
-  local ip="$1"
-  local name="$2"
-  local vault_base="$HOME/Vault/Target"
-  local template="$HOME/Vault/Obsidian/80_Templates/Template-Target.md"
-
-  if [ -z "$ip" ]; then
-    export TARGET_IP=""
-    export TARGET_NAME=""
-    export TARGET_DIR=""
-    export workdir=""
-    export OUT=""
-    export LOG=""
-    export ASSETS=""
-    export INIT_SCAN_SOURCE=""
-    export INIT_PORTS=""
-    echo "[!] Targeting has been removed."
-    return
-  fi
-
-  local target_dir="$vault_base/$ip"
-  local note_file="$target_dir/${ip}.md"
-  local tag="# TARGET"
-
-  mkdir -p "$target_dir/assets" "$target_dir/result/autorecon" "$target_dir/log"
-
-  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
-
-  export TARGET_IP="$ip"
-  export TARGET_NAME="$name"
-  export TARGET_DIR="$target_dir"
-  export workdir="$target_dir"
-  export OUT="$target_dir/result"
-  export LOG="$target_dir/log"
-  export ASSETS="$target_dir/assets"
-  export INIT_SCAN_SOURCE=""
-  export INIT_PORTS=""
-
-  if [ -n "$name" ]; then
-    sudo sed -i "\| $name $tag|d; \|^$ip |d" /etc/hosts
-    echo "$ip $name $tag" | sudo tee -a /etc/hosts > /dev/null
-  fi
-
-  if [ ! -f "$note_file" ]; then
-    if [ -f "$template" ]; then
-      cp "$template" "$note_file"
-      sed -i "s|<% tp.file.title %>|$ip|g" "$note_file"
-    else
-      echo "[!] Template missing: $template"
-      cat > "$note_file" <<EOF
-# $ip ${name:+($name)}
-
-## Target Info
-- IP: $ip
-- Hostname: ${name:-}
-
----
-
-## Quick Start
-
-\`\`\`zsh
-target $ip ${name:-}
-scaninit
-\`\`\`
-
----
-
-## Port Scan
-
-Primary: \`scaninit\`
-
-> If scaninit fails:
-> - Check \`\$TARGET_IP\`
-> - Check \`result/\`
-> - Check \`log/\`
-
----
-
-## Open Ports
--
-
----
-
-## Notes
--
-
----
-
-## Next Actions
--
-EOF
-    fi
-  fi
-
-  cd "$target_dir" || return
-
-  echo "----------------------------------------"
-  echo "Target Set & Moved to $target_dir"
-  echo "IP   : $TARGET_IP"
-  echo "FQDN : ${TARGET_NAME:-N/A}"
-  echo "----------------------------------------"
-}
-
-# -----------------------------
 # Tmux session for target
 # -----------------------------
 targettmux() {
   local ip="$1"
   local name="$2"
-  local vault_base="$HOME/Vault/Target"
 
   if [ -z "$ip" ]; then
     echo "[!] Usage: targettmux <IP> [NAME]"
     return 1
   fi
-
-  local target_dir="$vault_base/$ip"
-  local out_dir="$target_dir/result"
-  local log_dir="$target_dir/log"
-  local assets_dir="$target_dir/assets"
-
-  mkdir -p "$assets_dir" "$target_dir/result/autorecon" "$log_dir"
-  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
 
   # --- セッション名生成 ---
   local last_octet="${ip##*.}"
@@ -1234,21 +1273,7 @@ targettmux() {
   echo "[*] Creating session: $session"
 
   # --- 新規セッション ---
-  tmux new-session -d -s "$session" -c "$target_dir"
-
-  # --- セッション単位で環境変数を保持 ---
-  tmux set-environment -t "$session" TARGET_IP "$ip"
-  tmux set-environment -t "$session" TARGET_NAME "$name"
-  tmux set-environment -t "$session" TARGET_DIR "$target_dir"
-  tmux set-environment -t "$session" workdir "$target_dir"
-  tmux set-environment -t "$session" OUT "$out_dir"
-  tmux set-environment -t "$session" LOG "$log_dir"
-  tmux set-environment -t "$session" ASSETS "$assets_dir"
-  tmux set-environment -t "$session" INIT_SCAN_SOURCE ""
-  tmux set-environment -t "$session" INIT_PORTS ""
-  tmux set-environment -t "$session" TARGET_SESSION "1"
-
-  tmux set-option -t "$session" -gq @logging-path "$log_dir"
+  tmux new-session -d -s "$session"
 
   # --- ペイン構成 ---
   tmux split-window -h -t "$session"
@@ -1260,65 +1285,16 @@ targettmux() {
   # 2: 右下 (notes)
 
   # --- 左: scan ---
-  tmux send-keys -t "$session:0.0" "target '$ip' '$name'" C-m
+  tmux send-keys -t "$session:0.0" "target $ip $name" C-m
 
   # --- 右上: enum ---
-  tmux send-keys -t "$session:0.1" "export TARGET_IP='$ip' TARGET_NAME='$name' TARGET_DIR='$target_dir' workdir='$target_dir' OUT='$out_dir' LOG='$log_dir' ASSETS='$assets_dir' INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
-  tmux send-keys -t "$session:0.1" "cd '$HOME/Workbench'" C-m
+  tmux send-keys -t "$session:0.1" "cd ~/Workbench" C-m
 
   # --- 右下: notes ---
-  tmux send-keys -t "$session:0.2" "export TARGET_IP='$ip' TARGET_NAME='$name' TARGET_DIR='$target_dir' workdir='$target_dir' OUT='$out_dir' LOG='$log_dir' ASSETS='$assets_dir' INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
-  tmux send-keys -t "$session:0.2" "cd '$target_dir'" C-m
+  tmux send-keys -t "$session:0.2" "cd \$TARGET_DIR 2>/dev/null || cd ~" C-m
 
   # --- アクティブペイン ---
   tmux select-pane -t "$session:0.0"
 
   tmux attach -t "$session"
-}
-
-# -----------------------------
-# target reset
-# - /etc/hosts の # TARGET を全削除
-# - target系 tmux session を全削除
-# - 現在シェルの target 変数をクリア
-# -----------------------------
-targetreset() {
-  local current_target_dir="$TARGET_DIR"
-  local sessions
-  local s
-
-  # --- hosts クリア ---
-  sudo sed -i '/# TARGET/d' /etc/hosts
-
-  # --- target directory配下にいるなら退避 ---
-  if [[ -n "$current_target_dir" && "$PWD" == "$current_target_dir"* ]]; then
-    cd ~ || return
-  fi
-
-  # --- target系 tmux session を削除 ---
-  sessions=$(tmux list-sessions -F '#S' 2>/dev/null)
-
-  if [[ -n "$sessions" ]]; then
-    while IFS= read -r s; do
-      [[ -z "$s" ]] && continue
-
-      if tmux show-environment -t "$s" 2>/dev/null | grep -q '^TARGET_SESSION=1$'; then
-        tmux kill-session -t "$s"
-        echo "[*] Killed tmux session: $s"
-      fi
-    done <<< "$sessions"
-  fi
-
-  # --- 現在シェルの target 環境をクリア ---
-  export TARGET_IP=""
-  export TARGET_NAME=""
-  export TARGET_DIR=""
-  export workdir=""
-  export OUT=""
-  export LOG=""
-  export ASSETS=""
-  export INIT_SCAN_SOURCE=""
-  export INIT_PORTS=""
-
-  echo "[!] All target contexts cleared."
 }

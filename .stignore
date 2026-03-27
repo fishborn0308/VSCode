@@ -1,0 +1,11 @@
+// Git管理をMacに封じ込める
+.git
+.gitignore
+
+// エディタのプロジェクト固有設定を同期しない
+.vscode/
+.cursor/
+
+// Obsidianの設定（Kaliのみこれを入れる、またはMac-Win間でも分けるなら入れる）
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json

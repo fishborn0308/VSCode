@@ -1,2 +1,71 @@
 {
+  // --- 0. スキーマ検証設定 ---
+  "json.schemas": [],
+
+  // --- 1. エディタ基本（視認性・操作性向上） ---
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.stickyScroll.enabled": true, // スクロール時にクラス名などを上部に固定
+  "editor.renderWhitespace": "all", // 半角スペース/タブを可視化
+  "editor.renderControlCharacters": true, // 制御文字を表示
+  "editor.guides.bracketPairs": true, // 対応する括弧を色付け
+  "editor.guides.indentation": true, // インデントガイドを表示
+  "editor.renderLineHighlight": "all", // 選択行を強調
+  "editor.cursorBlinking": "smooth", // カーソルの点滅を滑らかに
+  "editor.minimap.enabled": true,
+  "editor.minimap.renderCharacters": false, // ミニマップを抽象化して見やすく
+  // --- ガイドライン（ルーラー）設定 ---
+  "editor.rulers": [
+    80, // 一般的な標準（Pythonなど）
+    120 // 少し長めの処理を書く際の目安
+  ],
+
+  // 視覚的なカスタマイズ
+  "workbench.colorCustomizations": {
+    "editorRuler.foreground": "#555555" // ガイドラインの色を少し薄くして目立たせすぎない
+  },
+
+  // 折り返しの設定（ラインに合わせて折り返す場合）
+  // "editor.wordWrap": "off" // 自動折り返しをオフにして、ラインを超えたら自分で改行するスタイル
+
+  // --- 2. ファイル管理（マルチOS・Syncthing対策） ---
+  "files.autoGuessEncoding": true, // 文字コード自動推測
+  "files.eol": "\n", // 改行コードをLFに固定（重要：Kali/Macでの実行エラー防止）
+  "files.trimTrailingWhitespace": true, // 行末の不要なスペースを削除
+  "files.insertFinalNewline": true, // ファイル末尾に必ず空行を挿入
+  "files.autoSave": "onFocusChange", // フォーカスが外れたら保存（Syncthing同期のトリガーに最適）
+
+  // --- 3. Python 特化設定 ---
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.terminal.activateEnvironment": true,
+
+  // --- 4. スクリプト・設定ファイル関連付け ---
+  "files.associations": {
+    "*.conf": "properties",
+    ".zshrc": "shellscript",
+    "tmux.conf": "properties",
+    "*.batch": "bat",
+    "*.sh": "shellscript",
+    ".bashrc": "shellscript"
+  },
+
+  // --- 5. ターミナル設定 ---
+  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.cursorStyle": "line",
+  "terminal.integrated.copyOnSelection": true,
+  "terminal.integrated.scrollback": 10000, // ログを遡れるように増量
+
+  // --- 6. 拡張機能連携（推奨：Error Lens等） ---
+  "errorLens.enabled": true, // エラーを行末に表示
+  "workbench.iconTheme": "material-icon-theme",
+  "editor.gotoLocation.multipleDefinitions": "peek",
+  "editor.gotoLocation.multipleReferences": "peek"
 }
