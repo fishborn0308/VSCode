@@ -1042,3 +1042,25 @@ targetreset() {
 
   echo "[!] All target contexts cleared."
 }
+
+# Obsidian sync wrappers
+
+ports-note() {
+  ports-init || return 1
+  l2o init
+}
+
+nextsvc-note() {
+  nextsvc || return 1
+  l2o service
+}
+
+full-note() {
+  fullcheck
+  l2o full
+}
+
+scan-note() {
+  scaninit || return 1
+  l2o all
+}
