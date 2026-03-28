@@ -58,17 +58,121 @@ build_services() {
 }
 
 build_actions() {
-  local f="$1"
-  local o
-  o="$(grep -E 'open' "$f" || true)"
+  local file="$1"
+  [ -f "$file" ] || return 0
+
+  local open_lines
+  open_lines="$(grep -E '^[0-9]+/(tcp|udp)[[:space:]]+open' "$file" || true)"
 
   {
-    echo "$o" | grep -qi http && echo "[WEB] → ffuf / vhost / login"
-    echo "$o" | grep -qi smb && echo "[SMB] → enum4linux-ng"
-    echo "$o" | grep -qi ldap && echo "[LDAP] → ldapsearch"
-    echo "$o" | grep -qi ssh && echo "[SSH] → creds / keys"
-    echo "$o" | grep -qi ftp && echo "[FTP] → anonymous"
-  } | sed '/^$/d'
+    if echo "$open_lines" | grep -Eqi 'http|https'; then
+      echo "[WEB]"
+      echo "  → title / tech / login / upload / API"
+      echo "  → ffuf / gobuster / vhost"
+
+      grep -qi 'apache' "$file" && echo "  → Apache: CGI / misconfig / default files"
+      grep -qi 'nginx' "$file" && echo "  → Nginx: proxy / config / hidden paths"
+      grep -qi 'iis' "$file" && echo "  → IIS: ASP.NET / shortname / web.config"
+      grep -qi 'tomcat' "$file" && echo "  → Tomcat: manager / WAR deploy / default creds"
+      grep -qi 'jetty' "$file" && echo "  → Jetty: admin / debug / Java app surface"
+      grep -qiE 'https|ssl|tls' "$file" && echo "  → SSL: cert CN/SAN / subdomain / TLS config"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qiE 'microsoft-ds|netbios|smb'; then
+      echo "[SMB]"
+      echo "  → enum4linux-ng / smbclient"
+      echo "  → anonymous / shares / users"
+      grep -qi 'signing' "$file" && echo "  → check SMB signing"
+      grep -qi 'samba' "$file" && echo "  → Samba version / known vulns / writable share"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qiE 'ldap|kerberos'; then
+      echo "[AD / LDAP / KERBEROS]"
+      echo "  → ldapsearch / kerbrute / enum"
+      echo "  → users / domain / AS-REP / password policy"
+      grep -qi 'kerberos' "$file" && echo "  → check AS-REP roast / user enum"
+      grep -qi 'ldap' "$file" && echo "  → check naming contexts / anonymous bind"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'winrm'; then
+      echo "[WINRM]"
+      echo "  → evil-winrm (when creds available)"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'ms-wbt-server'; then
+      echo "[RDP]"
+      echo "  → xfreerdp / creds / NLA"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'ssh'; then
+      echo "[SSH]"
+      echo "  → creds / keys / version"
+      echo "  → usually lower priority unless creds exist"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'telnet'; then
+      echo "[TELNET]"
+      echo "  → manual login check first"
+      echo "  → default / weak creds"
+      echo "  → inspect banner / prompt"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'ftp'; then
+      echo "[FTP]"
+      echo "  → anonymous / ls / get / put"
+      echo "  → writable upload check"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'smtp'; then
+      echo "[SMTP]"
+      echo "  → user enum / VRFY / EXPN"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'mysql'; then
+      echo "[MYSQL]"
+      echo "  → creds / anonymous / local file / version"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'postgresql'; then
+      echo "[POSTGRESQL]"
+      echo "  → creds / db enum / role check"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'mongodb'; then
+      echo "[MONGODB]"
+      echo "  → no-auth / db list / dump"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'redis'; then
+      echo "[REDIS]"
+      echo "  → unauth / config / file write"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'elasticsearch'; then
+      echo "[ELASTICSEARCH]"
+      echo "  → unauth API / indices / data leak"
+      echo
+    fi
+
+    if echo "$open_lines" | grep -qi 'docker'; then
+      echo "[DOCKER]"
+      echo "  → Docker API exposure / container escape surface"
+      echo
+    fi
+  } | sed '/^$/N;/^\n$/D'
 }
 
 sync_init() {

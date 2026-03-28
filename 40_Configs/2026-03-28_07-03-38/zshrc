@@ -1,0 +1,1324 @@
+# ~/.zshrc file for zsh interactive shells.
+# see /usr/share/doc/zsh/examples/zshrc for examples
+
+setopt autocd              # change directory just by typing its name
+#setopt correct            # auto correct mistakes
+setopt interactivecomments # allow comments in interactive mode
+setopt magicequalsubst     # enable filename expansion for arguments of the form ‘anything=expression’
+setopt nonomatch           # hide error message if there is no match for the pattern
+setopt notify              # report the status of background jobs immediately
+setopt numericglobsort     # sort filenames numerically when it makes sense
+setopt promptsubst         # enable command substitution in prompt
+
+WORDCHARS='_-' # Don't consider certain characters part of the word
+
+# hide EOL sign ('%')
+PROMPT_EOL_MARK=""
+
+# configure key keybindings
+bindkey -e                                        # emacs key bindings
+bindkey ' ' magic-space                           # do history expansion on space
+bindkey '^U' backward-kill-line                   # ctrl + U
+bindkey '^[[3;5~' kill-word                       # ctrl + Supr
+bindkey '^[[3~' delete-char                       # delete
+bindkey '^[[1;5C' forward-word                    # ctrl + ->
+bindkey '^[[1;5D' backward-word                   # ctrl + <-
+bindkey '^[[5~' beginning-of-buffer-or-history    # page up
+bindkey '^[[6~' end-of-buffer-or-history          # page down
+bindkey '^[[H' beginning-of-line                  # home
+bindkey '^[[F' end-of-line                        # end
+bindkey '^[[Z' undo                               # shift + tab undo last action
+
+# enable completion features
+autoload -Uz compinit
+compinit -d ~/.cache/zcompdump
+zstyle ':completion:*:*:*:*:*' menu select
+zstyle ':completion:*' auto-description 'specify: %d'
+zstyle ':completion:*' completer _expand _complete
+zstyle ':completion:*' format 'Completing %d'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' list-colors ''
+zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' rehash true
+zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
+zstyle ':completion:*' use-compctl false
+zstyle ':completion:*' verbose true
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+
+# History configurations
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt hist_expire_dups_first # delete duplicates first when HISTFILE size exceeds HISTSIZE
+setopt hist_ignore_dups       # ignore duplicated commands history list
+setopt hist_ignore_space      # ignore commands that start with space
+setopt hist_verify            # show command with history expansion to user before running it
+#setopt share_history         # share command history data
+
+# force zsh to show the complete history
+alias history="history 0"
+
+# configure `time` format
+TIMEFMT=$'\nreal\t%E\nuser\t%U\nsys\t%S\ncpu\t%P'
+
+# make less more friendly for non-text input files, see lesspipe(1)
+#[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+        # We have color support; assume it's compliant with Ecma-48
+        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+        # a case would tend to support setf rather than setaf.)
+        color_prompt=yes
+    else
+        color_prompt=
+    fi
+fi
+
+configure_prompt() {
+    prompt_symbol=㉿
+    # Skull emoji for root terminal
+    #[ "$EUID" -eq 0 ] && prompt_symbol=💀
+    case "$PROMPT_ALTERNATIVE" in
+        twoline)
+            PROMPT=$'%F{%(#.blue.green)}┌──${debian_chroot:+($debian_chroot)─}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))─}(%B%F{%(#.red.blue)}%n'$prompt_symbol$'%m%b%F{%(#.blue.green)})-[%B%F{reset}%(6~.%-1~/…/%4~.%5~)%b%F{%(#.blue.green)}]\n└─%B%(#.%F{red}#.%F{blue}$)%b%F{reset} '
+            # Right-side prompt with exit codes and background processes
+            #RPROMPT=$'%(?.. %? %F{red}%B⨯%b%F{reset})%(1j. %j %F{yellow}%B⚙%b%F{reset}.)'
+            ;;
+        oneline)
+            PROMPT=$'${debian_chroot:+($debian_chroot)}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))}%B%F{%(#.red.blue)}%n@%m%b%F{reset}:%B%F{%(#.blue.green)}%~%b%F{reset}%(#.#.$) '
+            RPROMPT=
+            ;;
+        backtrack)
+            PROMPT=$'${debian_chroot:+($debian_chroot)}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))}%B%F{red}%n@%m%b%F{reset}:%B%F{blue}%~%b%F{reset}%(#.#.$) '
+            RPROMPT=
+            ;;
+    esac
+    unset prompt_symbol
+}
+
+# The following block is surrounded by two delimiters.
+# These delimiters must not be modified. Thanks.
+# START KALI CONFIG VARIABLES
+PROMPT_ALTERNATIVE=twoline
+NEWLINE_BEFORE_PROMPT=yes
+# STOP KALI CONFIG VARIABLES
+
+if [ "$color_prompt" = yes ]; then
+    # override default virtualenv indicator in prompt
+    VIRTUAL_ENV_DISABLE_PROMPT=1
+
+    configure_prompt
+
+    # enable syntax-highlighting
+    if [ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
+        . /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+        ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
+        ZSH_HIGHLIGHT_STYLES[default]=none
+        ZSH_HIGHLIGHT_STYLES[unknown-token]=underline
+        ZSH_HIGHLIGHT_STYLES[reserved-word]=fg=cyan,bold
+        ZSH_HIGHLIGHT_STYLES[suffix-alias]=fg=green,underline
+        ZSH_HIGHLIGHT_STYLES[global-alias]=fg=green,bold
+        ZSH_HIGHLIGHT_STYLES[precommand]=fg=green,underline
+        ZSH_HIGHLIGHT_STYLES[commandseparator]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[autodirectory]=fg=green,underline
+        ZSH_HIGHLIGHT_STYLES[path]=bold
+        ZSH_HIGHLIGHT_STYLES[path_pathseparator]=
+        ZSH_HIGHLIGHT_STYLES[path_prefix_pathseparator]=
+        ZSH_HIGHLIGHT_STYLES[globbing]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[history-expansion]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[command-substitution]=none
+        ZSH_HIGHLIGHT_STYLES[command-substitution-delimiter]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[process-substitution]=none
+        ZSH_HIGHLIGHT_STYLES[process-substitution-delimiter]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[single-hyphen-option]=fg=green
+        ZSH_HIGHLIGHT_STYLES[double-hyphen-option]=fg=green
+        ZSH_HIGHLIGHT_STYLES[back-quoted-argument]=none
+        ZSH_HIGHLIGHT_STYLES[back-quoted-argument-delimiter]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[single-quoted-argument]=fg=yellow
+        ZSH_HIGHLIGHT_STYLES[double-quoted-argument]=fg=yellow
+        ZSH_HIGHLIGHT_STYLES[dollar-quoted-argument]=fg=yellow
+        ZSH_HIGHLIGHT_STYLES[rc-quote]=fg=magenta
+        ZSH_HIGHLIGHT_STYLES[dollar-double-quoted-argument]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[back-double-quoted-argument]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[back-dollar-quoted-argument]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[assign]=none
+        ZSH_HIGHLIGHT_STYLES[redirection]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[comment]=fg=black,bold
+        ZSH_HIGHLIGHT_STYLES[named-fd]=none
+        ZSH_HIGHLIGHT_STYLES[numeric-fd]=none
+        ZSH_HIGHLIGHT_STYLES[arg0]=fg=cyan
+        ZSH_HIGHLIGHT_STYLES[bracket-error]=fg=red,bold
+        ZSH_HIGHLIGHT_STYLES[bracket-level-1]=fg=blue,bold
+        ZSH_HIGHLIGHT_STYLES[bracket-level-2]=fg=green,bold
+        ZSH_HIGHLIGHT_STYLES[bracket-level-3]=fg=magenta,bold
+        ZSH_HIGHLIGHT_STYLES[bracket-level-4]=fg=yellow,bold
+        ZSH_HIGHLIGHT_STYLES[bracket-level-5]=fg=cyan,bold
+        ZSH_HIGHLIGHT_STYLES[cursor-matchingbracket]=standout
+    fi
+else
+    PROMPT='${debian_chroot:+($debian_chroot)}%n@%m:%~%(#.#.$) '
+fi
+unset color_prompt force_color_prompt
+
+toggle_oneline_prompt(){
+    if [ "$PROMPT_ALTERNATIVE" = oneline ]; then
+        PROMPT_ALTERNATIVE=twoline
+    else
+        PROMPT_ALTERNATIVE=oneline
+    fi
+    configure_prompt
+    zle reset-prompt
+}
+zle -N toggle_oneline_prompt
+bindkey ^P toggle_oneline_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*|Eterm|aterm|kterm|gnome*|alacritty)
+    TERM_TITLE=$'\e]0;${debian_chroot:+($debian_chroot)}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))}%n@%m: %~\a'
+    ;;
+*)
+    ;;
+esac
+
+precmd() {
+    # Print the previously configured title
+    print -Pnr -- "$TERM_TITLE"
+
+    # Print a new line before the prompt, but only if it is not the first line
+    if [ "$NEWLINE_BEFORE_PROMPT" = yes ]; then
+        if [ -z "$_NEW_LINE_BEFORE_PROMPT" ]; then
+            _NEW_LINE_BEFORE_PROMPT=1
+        else
+            print ""
+        fi
+    fi
+}
+
+# enable color support of ls, less and man, and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    export LS_COLORS="$LS_COLORS:ow=30;44:" # fix ls color for folders with 777 permissions
+
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+    alias diff='diff --color=auto'
+    alias ip='ip --color=auto'
+
+    export LESS_TERMCAP_mb=$'\E[1;31m'     # begin blink
+    export LESS_TERMCAP_md=$'\E[1;36m'     # begin bold
+    export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
+    export LESS_TERMCAP_so=$'\E[01;33m'    # begin reverse video
+    export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
+    export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
+    export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
+M=
+    # Take advantage of $LS_COLORS for completion as well
+    zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+    zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+fi
+
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# enable auto-suggestions based on the history
+if [ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
+    . /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    # change suggestion color
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
+fi
+
+# enable command-not-found if installed
+if [ -f /etc/zsh_command_not_found ]; then
+    . /etc/zsh_command_not_found
+fi
+# ----------------------------------------
+# Add the command to the path.
+# ----------------------------------------
+export PATH="$HOME/Tools/Bin:$PATH"
+export PATH="$HOME/Tools/Python:$PATH"
+export PATH="$HOME/Tools/Shell:$PATH"
+
+# ----------------------------------------
+# History
+# ----------------------------------------
+setopt HIST_IGNORE_ALL_DUPS
+setopt SHARE_HISTORY
+
+# ----------------------------------------
+# Plugins / Tools
+# ----------------------------------------
+source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source <(fzf --zsh)
+eval "$(zoxide init zsh)"
+
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --preview 'head -50 {} 2>/dev/null'"
+export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:3:hidden:wrap --bind '?:toggle-preview'"
+
+# ----------------------------------------
+# Aliases
+# ----------------------------------------
+alias ll='ls -alF'
+alias gclone='cd ~/tools/git && git clone'
+alias gup='find ~/Tools/Git -maxdepth 2 -name .git -type d -execdir git pull --rebase \;'
+alias maintenance='sudo apt update && sudo apt dist-upgrade -y && gup && pipx upgrade-all'
+alias pserv='python3 -m http.server 8000'
+alias pserv80='sudo python3 -m http.server 80'
+alias udot='updog -p 80'
+alias icat='kitty +kitten icat'
+alias vpnip="ip -br -4 a show tun0 | awk '{print \$3}' | cut -d/ -f1"
+alias opentarget='xdg-open "$TARGET_DIR/$TARGET_IP.md"'
+alias arlog='tail -f $OUT/autorecon/autorecon.log'
+alias udp-open='grep -E "open|open\\|filtered" $OUT/nmap_udp_*.nmap 2>/dev/null'
+alias ar='autorecon "$TARGET_IP" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon.log" 2>&1'
+alias ar_f_nmap='autorecon "$TARGET_IP" -p "$INIT_PORTS" -o "$OUT/autorecon_nmap" > "$OUT/autorecon_nmap/autorecon.log" 2>&1'
+alias ar_f_nmap_full='ports=$(extract_ports_gnmap "$OUT/nmap_full.gnmap"); autorecon "$TARGET_IP" -p "$ports" -o "$OUT/autorecon_full" > "$OUT/autorecon_full/autorecon.log" 2>&1'
+# ----------------------------------------
+# Paths
+# ----------------------------------------
+export WORDLISTS="$HOME/Workbench/Wordlists"
+export USERS="$WORDLISTS/Usernames"
+export PASSES="$WORDLISTS/Passwords"
+export CREDS="$WORDLISTS/Credentials"
+export DISCOVERY="$WORDLISTS/Discovery"
+export ROCKYOU="$WORDLISTS/Passwords/rockyou.txt"
+export SECLISTS="/usr/share/seclists"
+
+alias cdword='cd $WORDLISTS'
+alias cdusers='cd $USERS'
+alias cdpass='cd $PASSES'
+alias cdcreds='cd $CREDS'
+alias cddisc='cd $DISCOVERY'
+alias cdseclists='cd $SECLISTS'
+
+# ----------------------------------------
+# Prompt helpers
+# ----------------------------------------
+refresh_oscp_prompt() {
+  local my_ip
+  my_ip=$(ip -br -4 a show tun0 2>/dev/null | awk '{print $3}' | cut -d/ -f1)
+  [ -z "$my_ip" ] && my_ip=$(ip -br -4 a show eth0 2>/dev/null | awk '{print $3}' | cut -d/ -f1)
+  CURRENT_MY_IP="${my_ip:-N/A}"
+
+  if [ -n "$TARGET_IP" ]; then
+    if [ -n "$TARGET_NAME" ]; then
+      TARGET_STATUS="%F{red}[T: $TARGET_IP ($TARGET_NAME)]%f"
+    else
+      TARGET_STATUS="%F{red}[T: $TARGET_IP]%f"
+    fi
+  else
+    TARGET_STATUS=""
+  fi
+}
+
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd refresh_oscp_prompt
+
+setopt prompt_subst
+PROMPT='%F{cyan}[L: ${CURRENT_MY_IP}]%f %F{blue}%~%f %# '
+RPROMPT='${TARGET_STATUS}'
+
+# ----------------------------------------
+# Search helpers
+# ----------------------------------------
+vault-grep() {
+  grep -r --color=always -E "$1" ~/Vault/Target/
+}
+
+getlist() {
+  local link_name="wordlist"
+
+  local selected_list
+  selected_list=$(find "$WORDLISTS" "$SECLISTS" -maxdepth 4 -type f 2>/dev/null | fzf \
+    --prompt="Select Wordlist > " \
+    --preview="echo '[ PATH: {} ]'; echo '[ SIZE: ' \$(wc -l < {} 2>/dev/null) ' lines ]'; echo '------------------'; head -n 15 {}")
+
+  if [ -n "$selected_list" ]; then
+    ln -sfn "$selected_list" "$link_name"
+    export ACTIVE_DICT
+    ACTIVE_DICT=$(basename "$selected_list")
+    echo "[+] Linked: $selected_list -> $link_name"
+    echo "[*] Exported: ACTIVE_DICT=$ACTIVE_DICT"
+  else
+    echo "No list selected."
+  fi
+}
+
+# ----------------------------------------
+# Ligolo / Chisel
+# ----------------------------------------
+setup_ligolo() {
+  sudo ip tuntap add user $USER mode tun ligolo
+  sudo ip link set ligolo up
+  echo "[+] TUN interface 'ligolo' is UP."
+}
+
+alias chisel_srv='~/Tools/Bin/chisel server -p 8080 --reverse'
+
+# ----------------------------------------
+# Logging helper
+# ----------------------------------------
+alias l2o='~/Tools/Shell/log2obsidian.sh'
+
+# -----------------------------
+# tmux environment sync
+# -----------------------------
+tmuxsync() {
+  [ -z "$TMUX" ] && return 0
+
+  local val
+
+  val=$(tmux show-environment -g TARGET_IP 2>/dev/null | sed -n 's/^TARGET_IP=//p')
+  [ -n "$val" ] && export TARGET_IP="$val"
+
+  val=$(tmux show-environment -g TARGET_NAME 2>/dev/null | sed -n 's/^TARGET_NAME=//p')
+  export TARGET_NAME="$val"
+
+  val=$(tmux show-environment -g TARGET_DIR 2>/dev/null | sed -n 's/^TARGET_DIR=//p')
+  [ -n "$val" ] && export TARGET_DIR="$val"
+
+  val=$(tmux show-environment -g OUT 2>/dev/null | sed -n 's/^OUT=//p')
+  [ -n "$val" ] && export OUT="$val"
+
+  val=$(tmux show-environment -g LOG 2>/dev/null | sed -n 's/^LOG=//p')
+  [ -n "$val" ] && export LOG="$val"
+
+  val=$(tmux show-environment -g ASSETS 2>/dev/null | sed -n 's/^ASSETS=//p')
+  [ -n "$val" ] && export ASSETS="$val"
+
+  val=$(tmux show-environment -g workdir 2>/dev/null | sed -n 's/^workdir=//p')
+  [ -n "$val" ] && export workdir="$val"
+
+  val=$(tmux show-environment -g INIT_SCAN_SOURCE 2>/dev/null | sed -n 's/^INIT_SCAN_SOURCE=//p')
+  [ -n "$val" ] && export INIT_SCAN_SOURCE="$val"
+
+  val=$(tmux show-environment -g INIT_PORTS 2>/dev/null | sed -n 's/^INIT_PORTS=//p')
+  [ -n "$val" ] && export INIT_PORTS="$val"
+}
+
+tmuxsync_precmd() {
+  [ -n "$TMUX" ] && tmuxsync
+}
+
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd tmuxsync_precmd
+
+# -----------------------------
+# scan helper
+# -----------------------------
+extract_ports_gnmap() {
+  local file="$1"
+
+  [ ! -f "$file" ] && return 1
+
+  grep -oE '[0-9]+/open' "$file" \
+    | cut -d/ -f1 \
+    | sort -n -u \
+    | paste -sd, -
+}
+
+# -----------------------------
+# scaninit (gnmap統一版)
+# -----------------------------
+scaninit() {
+  [ -n "$TMUX" ] && tmuxsync
+
+  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ] || [ -z "$LOG" ]; then
+    echo "[!] TARGET_IP / OUT / LOG is empty"
+    echo "    Run: target <IP> [NAME]"
+    return 1
+  fi
+
+  mkdir -p "$OUT" "$LOG"
+
+  echo "[*] TARGET_IP=$TARGET_IP"
+  echo "[*] OUT=$OUT"
+
+  local ports=""
+  local init_source=""
+
+  # -----------------------------
+  # 1. Rustscan
+  # -----------------------------
+  echo "[*] Rustscan fast scan..."
+  rustscan -a "$TARGET_IP" -t 2000 --ulimit 5000 -- -Pn -n -oA "$OUT/nmap_initial"
+
+  ports=$(extract_ports_gnmap "$OUT/nmap_initial.gnmap")
+
+  if [ -n "$ports" ]; then
+    init_source="$OUT/nmap_initial"
+    echo "[+] Open ports (rustscan): $ports"
+  else
+    # -----------------------------
+    # 2. 1sh Fallback
+    # -----------------------------
+    echo "[!] Rustscan unreliable → fallback to nmap top-ports"
+    nmap -Pn -n --top-ports 1000 "$TARGET_IP" -oA "$OUT/nmap_top1000"
+
+    ports=$(extract_ports_gnmap "$OUT/nmap_top1000.gnmap")
+
+    if [ -n "$ports" ]; then
+      init_source="$OUT/nmap_top1000"
+      echo "[+] Open ports (fallback): $ports"
+    else
+      # -----------------------------
+      # 2nd fallback
+      # -----------------------------
+      echo "[!] No ports found → running full scan fallback (slow)"
+      nmap -Pn -n -p- "$TARGET_IP" -oA "$OUT/nmap_full_fallback"
+
+      ports=$(extract_ports_gnmap "$OUT/nmap_full_fallback.gnmap")
+
+      if [ -n "$ports" ]; then
+        init_source="$OUT/nmap_full_fallback"
+        echo "[+] Open ports (full fallback): $ports"
+      else
+        echo "[!] No open ports found at all"
+      fi
+    fi
+  fi
+
+  # -----------------------------
+  # 3. Save state
+  # -----------------------------
+  export INIT_SCAN_SOURCE="$init_source"
+  export INIT_PORTS="$ports"
+
+  if [ -n "$TMUX" ]; then
+    tmux set-environment -g INIT_SCAN_SOURCE "$INIT_SCAN_SOURCE"
+    tmux set-environment -g INIT_PORTS "$INIT_PORTS"
+  fi
+
+  # -----------------------------
+  # 4. Service scan
+  # -----------------------------
+  if [ -n "$ports" ]; then
+    echo "[*] Running service scan on: $ports"
+    nmap -Pn -n -sC -sV -p "$ports" "$TARGET_IP" -oA "$OUT/nmap_service"
+  else
+    echo "[!] Skipping service scan (no ports)"
+  fi
+
+  # -----------------------------
+  # 5. Full scan (BG)
+  # -----------------------------
+  echo "[*] Starting full port scan in background..."
+  nohup nmap -Pn -n -p- "$TARGET_IP" \
+    -oA "$OUT/nmap_full" \
+    > "$LOG/nmap_full.log" 2>&1 &
+
+  echo "[+] Background full scan started"
+}
+
+# -----------------------------
+# Buckup UDP Scan 1st
+# -----------------------------
+udp-fast() {
+  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ]; then
+    echo "[!] TARGET not set"
+    return 1
+  fi
+
+  # 価値の高いUDPポートだけ
+  local ports="53,67,68,69,123,137,138,161,162,500,1900,4500,5355"
+
+  echo "[*] UDP fast scan (high-value ports)"
+
+  sudo nmap -sU -Pn -n -p $ports \
+    --max-retries 1 --max-rate 2000 --host-timeout 60s \
+    -oA "$OUT/nmap_udp_fast" "$TARGET_IP"
+}
+
+# -----------------------------
+# Buckup UDP Scan 2nd
+# -----------------------------
+udp-top() {
+  sudo nmap -sU --top-ports 100 "$TARGET_IP" \
+    --max-retries 2 --max-rate 1000 \
+    -oA "$OUT/nmap_udp_top100"
+}
+
+# -----------------------------
+# Buckup UDP Scan last
+# -----------------------------
+udp-deep() {
+  sudo nmap -sU -p- "$TARGET_IP" \
+    -oA "$OUT/nmap_udp_full"
+}
+
+# -----------------------------
+# ports-init
+# -----------------------------
+ports-init() {
+  [ -n "$TMUX" ] && tmuxsync
+
+  if [ -z "$OUT" ]; then
+    echo "[!] OUT is empty"
+    return 1
+  fi
+
+  local base=""
+  local file=""
+  local output=""
+
+  if [ -n "$INIT_SCAN_SOURCE" ] && [ -f "${INIT_SCAN_SOURCE}.nmap" ]; then
+    base="$INIT_SCAN_SOURCE"
+  elif [ -f "$OUT/nmap_initial.nmap" ]; then
+    base="$OUT/nmap_initial"
+  elif [ -f "$OUT/nmap_top1000.nmap" ]; then
+    base="$OUT/nmap_top1000"
+  else
+    echo "[!] No usable initial scan result found"
+    echo "    Checked:"
+    echo "    - $OUT/nmap_initial.nmap"
+    echo "    - $OUT/nmap_top1000.nmap"
+    return 1
+  fi
+
+  file="${base}.nmap"
+  output=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file")
+
+  if [ -z "$output" ]; then
+    echo "[!] No open ports found in: $file"
+    return 1
+  fi
+
+  echo "#### Initial"
+  echo '```text'
+  echo "$output"
+  echo '```'
+
+  printf '%s\n' "$output" | tee /dev/tty | xclip -selection clipboard > /dev/null
+  echo "[+] Source: $file"
+  echo "[+] Copied to clipboard"
+}
+
+# -----------------------------
+# ports-serv
+# -----------------------------
+ports-serv() {
+  [ -n "$TMUX" ] && tmuxsync
+
+  local file="$OUT/nmap_service.nmap"
+
+  if [ -z "$OUT" ]; then
+    echo "[!] OUT is empty"
+    return 1
+  fi
+
+  if [ ! -f "$file" ]; then
+    echo "[!] File not found: $file"
+    return 1
+  fi
+
+  local output
+  output=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file" | sed 's/  */ /g')
+
+  if [ -z "$output" ]; then
+    echo "[!] No open ports found in: $file"
+    return 1
+  fi
+
+  echo "#### Service Scan"
+  echo '```text'
+  echo "$output"
+  echo '```'
+
+  printf '%s\n' "$output" | tee /dev/tty | xclip -selection clipboard > /dev/null
+  echo "[+] Source: $file"
+  echo "[+] Copied to clipboard"
+}
+
+# -----------------------------
+# ports (both)
+# -----------------------------
+ports() {
+  ports-init
+  echo
+  ports-serv
+}
+
+# -----------------------------
+# target screenshot
+# -----------------------------
+fshot() {
+  if [ -z "$ASSETS" ]; then
+    echo "[!] ASSETS is empty. Run: target <IP> [NAME]"
+    return 1
+  fi
+
+  mkdir -p "$ASSETS"
+
+  # 撮影前の最新ファイル
+  local before
+  before=$(ls -t "$ASSETS" 2>/dev/null | head -n 1)
+
+  # 撮影
+  flameshot gui --path "$ASSETS"
+
+  # 撮影後の最新ファイル
+  local after
+  after=$(ls -t "$ASSETS" 2>/dev/null | head -n 1)
+
+  if [ -z "$after" ] || [ "$before" = "$after" ]; then
+    echo "[!] Screenshot not saved"
+    return 1
+  fi
+
+  local fullpath="$ASSETS/$after"
+
+  # Obsidian用リンク（相対パス）
+  local rel="assets/$after"
+
+  # クリップボードへ
+  echo "![[${rel}]]" | xclip -selection clipboard
+
+  echo "[+] Saved: $fullpath"
+  echo "[+] Copied (Obsidian): ![[${rel}]]"
+}
+
+# -----------------------------
+# display screenshot dir
+# -----------------------------
+shotdir() {
+  echo "[*] This shell ASSETS: $ASSETS"
+}
+# -----------------------------
+# next step from port
+# -----------------------------
+next() {
+  echo "========== NEXT ACTION =========="
+  echo "[*] Ports: $INIT_PORTS"
+  echo
+
+  # -----------------------------
+  # Priority 1: Web（統合）
+  # -----------------------------
+  if [[ "$INIT_PORTS" == *"80"* || "$INIT_PORTS" == *"443"* || "$INIT_PORTS" == *"8080"* || "$INIT_PORTS" == *"8000"* ]]; then
+    echo "[P1] Web"
+    echo "  → ffuf / gobuster (dir, vhost)"
+    echo "  → login / upload / API"
+
+    if [[ "$INIT_PORTS" == *"443"* ]]; then
+      echo "  → SSL: cert / subdomain / TLS config"
+    fi
+
+    echo
+  fi
+
+  # -----------------------------
+  # SMB
+  # -----------------------------
+  if [[ "$INIT_PORTS" == *"445"* || "$INIT_PORTS" == *"139"* ]]; then
+    echo "[P2] SMB"
+    echo "  → enum4linux-ng / smbclient"
+    echo "  → anonymous / shares"
+    echo
+  fi
+
+  # -----------------------------
+  # AD
+  # -----------------------------
+  if [[ "$INIT_PORTS" == *"389"* || "$INIT_PORTS" == *"636"* || "$INIT_PORTS" == *"88"* ]]; then
+    echo "[P2] AD / LDAP / Kerberos"
+    echo "  → ldapsearch / kerbrute"
+    echo "  → AS-REP / user enum"
+    echo
+  fi
+
+  # -----------------------------
+  # 認証系
+  # -----------------------------
+  [[ "$INIT_PORTS" == *"5985"* || "$INIT_PORTS" == *"5986"* ]] && echo "[P3] WinRM → evil-winrm"
+  [[ "$INIT_PORTS" == *"3389"* ]] && echo "[P3] RDP → xfreerdp"
+  [[ "$INIT_PORTS" == *"22"* ]] && echo "[P3] SSH → creds / 後回し"
+
+  echo
+  echo "-----------------------------"
+  echo "[*] Always:"
+  echo "  → full scan check later"
+  echo "  → vhost / subdomain"
+  echo "  → creds reuse"
+  echo "================================"
+}
+
+# -----------------------------
+# next stip from serv
+# -----------------------------
+nextsvc() {
+  [ -n "$TMUX" ] && tmuxsync
+
+  local file="$OUT/nmap_service.nmap"
+
+  if [ -z "$OUT" ]; then
+    echo "[!] OUT is empty"
+    return 1
+  fi
+
+  if [ ! -f "$file" ]; then
+    echo "[!] File not found: $file"
+    echo "    Run service scan first"
+    return 1
+  fi
+
+  local open_lines
+  open_lines=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file")
+
+  echo "======= NEXT ACTION (SERVICE) ======="
+  echo "[*] Source: $file"
+  echo
+
+  # -----------------------------
+  # Web
+  # -----------------------------
+    if echo "$open_lines" | grep -Eqi 'http|https'; then
+    echo "[WEB]"
+    echo "  → title / tech / login / upload / API"
+    echo "  → ffuf / gobuster / vhost"
+
+    grep -qi 'apache' "$file" && echo "  → Apache: CGI / misconfig / default files"
+    grep -qi 'nginx' "$file" && echo "  → Nginx: proxy / config / hidden paths"
+    grep -qi 'iis' "$file" && echo "  → IIS: ASP.NET / shortname / web.config"
+    grep -qi 'tomcat' "$file" && echo "  → Tomcat: manager / WAR deploy / default creds"
+    grep -qi 'jetty' "$file" && echo "  → Jetty: admin / debug / Java app surface"
+
+    if grep -qiE 'https|ssl|tls' "$file"; then
+      echo "  → SSL: cert CN/SAN / subdomain / TLS config"
+    fi
+
+    echo
+  fi
+
+  # -----------------------------
+  # SMB / Windows
+  # -----------------------------
+  if echo "$open_lines" | grep -qiE 'microsoft-ds|netbios|smb'; then
+    echo "  → enum4linux-ng / smbclient"
+    echo "  → anonymous / shares / users"
+
+    grep -qi 'signing' "$file" && echo "  → check SMB signing"
+    grep -qi 'samba' "$file" && echo "  → Samba version / known vulns / writable share"
+
+    echo
+  fi
+
+  # -----------------------------
+  # LDAP / Kerberos / AD
+  # -----------------------------
+  if echo "$open_lines" | grep -qiE 'ldap|kerberos'; then
+    echo "[AD / LDAP / KERBEROS]"
+    echo "  → ldapsearch / kerbrute / enum"
+    echo "  → users / domain / AS-REP / password policy"
+
+    grep -qi 'kerberos' "$file" && echo "  → check AS-REP roast / user enum"
+    grep -qi 'ldap' "$file" && echo "  → check naming contexts / anonymous bind"
+
+    echo
+  fi
+
+  # -----------------------------
+  # WinRM / RDP / SSH / Telnet
+  # -----------------------------
+  if echo "$open_lines" | grep -qi 'winrm'; then
+    echo "[WINRM]"
+    echo "  → evil-winrm (when creds available)"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'ms-wbt-server'; then
+    echo "[RDP]"
+    echo "  → xfreerdp / creds / NLA"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'ssh'; then
+    echo "[SSH]"
+    echo "  → creds / keys / version"
+    echo "  → usually lower priority unless creds exist"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'telnet'; then
+    echo "[TELNET]"
+    echo "  → manual login check first"
+    echo "  → default / weak creds"
+    echo "  → inspect banner / prompt"
+    echo
+  fi
+
+  # -----------------------------
+  # FTP
+  # -----------------------------
+  if echo "$open_lines" | grep -qi 'ftp'; then
+    echo "[FTP]"
+    echo "  → anonymous / ls / get / put"
+    echo "  → writable upload check"
+    echo
+  fi
+
+  # -----------------------------
+  # SMTP
+  # -----------------------------
+  if echo "$open_lines" | grep -qi 'smtp'; then
+    echo "[SMTP]"
+    echo "  → user enum / VRFY / EXPN"
+    echo
+  fi
+
+  # -----------------------------
+  # Databases
+  # -----------------------------
+  if echo "$open_lines" | grep -qi 'mysql'; then
+    echo "[MYSQL]"
+    echo "  → creds / anonymous / local file / version"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'postgresql'; then
+    echo "[POSTGRESQL]"
+    echo "  → creds / db enum / role check"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'mongodb'; then
+    echo "[MONGODB]"
+    echo "  → no-auth / db list / dump"
+    echo
+  fi
+
+  # -----------------------------
+  # Misc high-value
+  # -----------------------------
+  if echo "$open_lines" | grep -qi 'redis' "$file"; then
+    echo "[REDIS]"
+    echo "  → unauth / config / file write"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'elasticsearch' "$file"; then
+    echo "[ELASTICSEARCH]"
+    echo "  → unauth API / indices / data leak"
+    echo
+  fi
+
+  if echo "$open_lines" | grep -qi 'docker' "$file"; then
+    echo "[DOCKER]"
+    echo "  → Docker API exposure / container escape surface"
+    echo
+  fi
+
+  echo "-------------------------------------"
+  echo "[*] Notes:"
+  echo "  → update Notes / Next Actions in Obsidian"
+  echo "  → compare with full scan later"
+  echo "====================================="
+}
+
+# -----------------------------
+# Buckup Config
+# -----------------------------
+backconf() {
+  local base="$HOME/Vault/Cursor/40_Configs"
+  local ts=$(date +%Y-%m-%d_%H-%M-%S)
+  local dest="$base/$ts"
+
+  mkdir -p "$dest"
+
+  echo "[*] Backing up configs → $dest"
+
+  cp "$HOME/.zshrc" "$dest/zshrc"
+  cp "$HOME/.tmux.conf" "$dest/tmux.conf"
+  cp "$HOME/.config/kitty/kitty.conf" "$dest/kitty.conf"
+
+  echo "[+] Backup completed"
+}
+
+# -----------------------------
+# Restore Config
+# -----------------------------
+restoreconf() {
+  local src="$HOME/Vault/Cursor/40_Configs"
+  local ts=$(date +%Y-%m-%d_%H-%M-%S)
+  local backup="$HOME/.config_backup/$ts"
+
+  mkdir -p "$backup"
+
+  echo "[*] Backup current configs → $backup"
+
+  [ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$backup/zshrc"
+  [ -f "$HOME/.tmux.conf" ] && cp "$HOME/.tmux.conf" "$backup/tmux.conf"
+  [ -f "$HOME/.config/kitty/kitty.conf" ] && cp "$HOME/.config/kitty/kitty.conf" "$backup/kitty.conf"
+
+  echo "[*] Restoring configs from $src"
+
+  cp "$src/zshrc" "$HOME/.zshrc"
+  cp "$src/tmux.conf" "$HOME/.tmux.conf"
+  cp "$src/kitty.conf" "$HOME/.config/kitty/kitty.conf"
+
+  echo "[+] Restore completed"
+  echo "[!] Backup saved: $backup"
+  echo "[!] Run: source ~/.zshrc"
+}
+
+# -----------------------------
+# Check Full Scan
+# -----------------------------
+fullcheck() {
+  if [ -z "$TARGET_IP" ] || [ -z "$OUT" ] || [ -z "$LOG" ]; then
+    echo "[!] TARGET_IP / OUT / LOG is empty"
+    echo "    Run: target <IP> [NAME]"
+    return 1
+  fi
+
+  local full_base="$OUT/nmap_full"
+  local full_log="$LOG/nmap_full.log"
+  local full_nmap="${full_base}.nmap"
+  local init_nmap="${INIT_SCAN_SOURCE}.nmap"
+
+  if pgrep -af "nmap .* -p- .*${TARGET_IP}" >/dev/null 2>&1; then
+    echo "[*] Full scan is still running"
+    echo "[*] Progress:"
+    [ -f "$full_log" ] && tail -n 20 "$full_log" || echo "[!] Log file not found: $full_log"
+    return 0
+  fi
+
+  if [ ! -f "$full_nmap" ]; then
+    echo "[!] Full scan result not found: $full_nmap"
+    return 1
+  fi
+
+  echo "[*] Full scan completed"
+  echo
+  echo "[+] Open ports (full):"
+  grep -E "^[0-9]+/(tcp|udp)\s+open" "$full_nmap"
+
+  if [ -n "$INIT_SCAN_SOURCE" ] && [ -f "$init_nmap" ]; then
+    local delta
+    delta=$(
+      comm -13 \
+        <(grep -E "^[0-9]+/(tcp|udp)\s+open" "$init_nmap" | cut -d/ -f1 | sort -n) \
+        <(grep -E "^[0-9]+/(tcp|udp)\s+open" "$full_nmap" | cut -d/ -f1 | sort -n)
+    )
+
+    echo
+    echo "[+] Delta (found later than initial scan):"
+    if [ -n "$delta" ]; then
+      echo "$delta"
+    else
+      echo "None"
+    fi
+  else
+    echo
+    echo "[!] Initial scan source not found, skipping delta"
+  fi
+}
+# -----------------------------
+# Tmux session for infrastructure
+# -----------------------------
+infratmux() {
+  local session="infra"
+
+  if tmux has-session -t "$session" 2>/dev/null; then
+    echo "[*] Attaching: $session"
+    tmux attach -t "$session"
+    return
+  fi
+
+  echo "[*] Creating infra session"
+
+  tmux new-session -d -s "$session"
+
+  # --- ペイン構成 ---
+  tmux split-window -h -t "$session"
+  tmux split-window -v -t "$session:0.1"
+
+  # pane:
+  # 0: 左 (VPN / monitor)
+  # 1: 右上 (server)
+  # 2: 右下 (transfer)
+
+  # --- 左: VPN ---
+  tmux send-keys -t "$session:0.0" "cd ~" C-m
+  tmux send-keys -t "$session:0.0" "echo '[VPN / Monitor]'" C-m
+
+  # --- 右上: server ---
+  tmux send-keys -t "$session:0.1" "cd ~/Transfer" C-m
+  tmux send-keys -t "$session:0.1" "echo '[HTTP / Server]'" C-m
+
+  # --- 右下: transfer ---
+  tmux send-keys -t "$session:0.2" "cd ~/Transfer" C-m
+  tmux send-keys -t "$session:0.2" "echo '[Payload / Transfer]'" C-m
+
+  tmux select-pane -t "$session:0.0"
+
+  tmux attach -t "$session"
+}
+
+# -----------------------------
+# target
+# -----------------------------
+target() {
+  local ip="$1"
+  local name="$2"
+  local vault_base="$HOME/Vault/Target"
+  local template="$HOME/Vault/Obsidian/80_Templates/Template-Target.md"
+
+  if [ -z "$ip" ]; then
+    export TARGET_IP=""
+    export TARGET_NAME=""
+    export TARGET_DIR=""
+    export workdir=""
+    export OUT=""
+    export LOG=""
+    export ASSETS=""
+    export INIT_SCAN_SOURCE=""
+    export INIT_PORTS=""
+    echo "[!] Targeting has been removed."
+    return
+  fi
+
+  local target_dir="$vault_base/$ip"
+  local note_file="$target_dir/${ip}.md"
+  local tag="# TARGET"
+
+  mkdir -p "$target_dir/assets" "$target_dir/result/autorecon" "$target_dir/log"
+
+  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
+
+  export TARGET_IP="$ip"
+  export TARGET_NAME="$name"
+  export TARGET_DIR="$target_dir"
+  export workdir="$target_dir"
+  export OUT="$target_dir/result"
+  export LOG="$target_dir/log"
+  export ASSETS="$target_dir/assets"
+  export INIT_SCAN_SOURCE=""
+  export INIT_PORTS=""
+
+  if [ -n "$name" ]; then
+    sudo sed -i "\| $name $tag|d; \|^$ip |d" /etc/hosts
+    echo "$ip $name $tag" | sudo tee -a /etc/hosts > /dev/null
+  fi
+
+  if [ ! -f "$note_file" ]; then
+    if [ -f "$template" ]; then
+      cp "$template" "$note_file"
+      sed -i "s|<% tp.file.title %>|$ip|g" "$note_file"
+    else
+      echo "[!] Template missing: $template"
+      cat > "$note_file" <<EOF
+# $ip ${name:+($name)}
+
+## Target Info
+- IP: $ip
+- Hostname: ${name:-}
+
+---
+
+## Quick Start
+
+\`\`\`zsh
+target $ip ${name:-}
+scaninit
+\`\`\`
+
+---
+
+## Port Scan
+
+Primary: \`scaninit\`
+
+> If scaninit fails:
+> - Check \`\$TARGET_IP\`
+> - Check \`result/\`
+> - Check \`log/\`
+
+---
+
+## Open Ports
+-
+
+---
+
+## Notes
+-
+
+---
+
+## Next Actions
+-
+EOF
+    fi
+  fi
+
+  cd "$target_dir" || return
+
+  echo "----------------------------------------"
+  echo "Target Set & Moved to $target_dir"
+  echo "IP   : $TARGET_IP"
+  echo "FQDN : ${TARGET_NAME:-N/A}"
+  echo "----------------------------------------"
+}
+
+# -----------------------------
+# Tmux session for target
+# -----------------------------
+targettmux() {
+  local ip="$1"
+  local name="$2"
+  local vault_base="$HOME/Vault/Target"
+
+  if [ -z "$ip" ]; then
+    echo "[!] Usage: targettmux <IP> [NAME]"
+    return 1
+  fi
+
+  local target_dir="$vault_base/$ip"
+  local out_dir="$target_dir/result"
+  local log_dir="$target_dir/log"
+  local assets_dir="$target_dir/assets"
+
+  mkdir -p "$assets_dir" "$target_dir/result/autorecon" "$log_dir"
+  ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
+
+  # --- セッション名生成 ---
+  local last_octet="${ip##*.}"
+  local third_octet
+  third_octet=$(echo "$ip" | awk -F. '{print $(NF-1)}')
+
+  local safe_name=""
+  if [ -n "$name" ]; then
+    safe_name="${name// /_}"
+    safe_name="${safe_name//[^a-zA-Z0-9_-]/}"
+  fi
+
+  local session
+  if [ -n "$safe_name" ]; then
+    session="${safe_name}_${last_octet}"
+  else
+    session="t_${third_octet}_${last_octet}"
+  fi
+
+  # --- 既存セッション ---
+  if tmux has-session -t "$session" 2>/dev/null; then
+    echo "[*] Attaching: $session"
+    tmux attach -t "$session"
+    return
+  fi
+
+  echo "[*] Creating session: $session"
+
+  # --- 新規セッション ---
+  tmux new-session -d -s "$session" -c "$target_dir"
+
+  # --- セッション単位で環境変数を保持 ---
+  tmux set-environment -t "$session" TARGET_IP "$ip"
+  tmux set-environment -t "$session" TARGET_NAME "$name"
+  tmux set-environment -t "$session" TARGET_DIR "$target_dir"
+  tmux set-environment -t "$session" workdir "$target_dir"
+  tmux set-environment -t "$session" OUT "$out_dir"
+  tmux set-environment -t "$session" LOG "$log_dir"
+  tmux set-environment -t "$session" ASSETS "$assets_dir"
+  tmux set-environment -t "$session" INIT_SCAN_SOURCE ""
+  tmux set-environment -t "$session" INIT_PORTS ""
+  tmux set-environment -t "$session" TARGET_SESSION "1"
+
+  tmux set-option -t "$session" -gq @logging-path "$log_dir"
+
+  # --- ペイン構成 ---
+  tmux split-window -h -t "$session"
+  tmux split-window -v -t "$session:0.1"
+
+  # pane:
+  # 0: 左 (scan)
+  # 1: 右上 (enum)
+  # 2: 右下 (notes)
+
+  # --- 左: scan ---
+  tmux send-keys -t "$session:0.0" "target '$ip' '$name'" C-m
+
+  # --- 右上: enum ---
+  tmux send-keys -t "$session:0.1" "export TARGET_IP='$ip' TARGET_NAME='$name' TARGET_DIR='$target_dir' workdir='$target_dir' OUT='$out_dir' LOG='$log_dir' ASSETS='$assets_dir' INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
+  tmux send-keys -t "$session:0.1" "cd '$HOME/Workbench'" C-m
+
+  # --- 右下: notes ---
+  tmux send-keys -t "$session:0.2" "export TARGET_IP='$ip' TARGET_NAME='$name' TARGET_DIR='$target_dir' workdir='$target_dir' OUT='$out_dir' LOG='$log_dir' ASSETS='$assets_dir' INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
+  tmux send-keys -t "$session:0.2" "cd '$target_dir'" C-m
+
+  # --- アクティブペイン ---
+  tmux select-pane -t "$session:0.0"
+
+  tmux attach -t "$session"
+}
+
+# -----------------------------
+# target reset
+# - /etc/hosts の # TARGET を全削除
+# - target系 tmux session を全削除
+# - 現在シェルの target 変数をクリア
+# -----------------------------
+targetreset() {
+  local current_target_dir="$TARGET_DIR"
+  local sessions
+  local s
+
+  # --- hosts クリア ---
+  sudo sed -i '/# TARGET/d' /etc/hosts
+
+  # --- target directory配下にいるなら退避 ---
+  if [[ -n "$current_target_dir" && "$PWD" == "$current_target_dir"* ]]; then
+    cd ~ || return
+  fi
+
+  # --- target系 tmux session を削除 ---
+  sessions=$(tmux list-sessions -F '#S' 2>/dev/null)
+
+  if [[ -n "$sessions" ]]; then
+    while IFS= read -r s; do
+      [[ -z "$s" ]] && continue
+
+      if tmux show-environment -t "$s" 2>/dev/null | grep -q '^TARGET_SESSION=1$'; then
+        tmux kill-session -t "$s"
+        echo "[*] Killed tmux session: $s"
+      fi
+    done <<< "$sessions"
+  fi
+
+  # --- 現在シェルの target 環境をクリア ---
+  export TARGET_IP=""
+  export TARGET_NAME=""
+  export TARGET_DIR=""
+  export workdir=""
+  export OUT=""
+  export LOG=""
+  export ASSETS=""
+  export INIT_SCAN_SOURCE=""
+  export INIT_PORTS=""
+
+  echo "[!] All target contexts cleared."
+}
