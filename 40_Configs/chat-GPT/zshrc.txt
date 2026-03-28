@@ -40,6 +40,8 @@ alias udp-open='grep -E "open|open\\|filtered" $OUT/nmap_udp_*.nmap 2>/dev/null'
 alias ar='autorecon "$TARGET_IP" -o "$OUT/autorecon" > "$OUT/autorecon/autorecon.log" 2>&1'
 alias ar_f_nmap='autorecon "$TARGET_IP" -p "$INIT_PORTS" -o "$OUT/autorecon_nmap" > "$OUT/autorecon_nmap/autorecon.log" 2>&1'
 alias ar_f_nmap_full='ports=$(extract_ports_gnmap "$OUT/nmap_full.gnmap"); autorecon "$TARGET_IP" -p "$ports" -o "$OUT/autorecon_full" > "$OUT/autorecon_full/autorecon.log" 2>&1'
+alias l2m='~/Tools/Shell/log2memo.sh'
+alias l2o='~/Tools/Shell/log2obsidian.sh'
 # ----------------------------------------
 # Paths
 # ----------------------------------------
