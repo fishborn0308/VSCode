@@ -5,6 +5,16 @@
 .obsidian/cache/
 .obsidian/plugins/obsidian-git/data.json
 
+# --- vscode ---
+
+# --- Syncthing ---
+.stfolder/
+.stignore
+
+# --- git ---
+.git/
+.gitignore
+
 # --- OS固有のゴミファイル ---
 .DS_Store
 *.swp
