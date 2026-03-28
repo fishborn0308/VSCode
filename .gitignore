@@ -1,0 +1,19 @@
+# --- Obsidian 内部設定 (デバイスごとに異なるため同期しない) ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/graph.json
+.obsidian/cache/
+.obsidian/plugins/obsidian-git/data.json
+
+# --- OS固有のゴミファイル ---
+.DS_Store
+*.swp
+Thumbs.db
+desktop.ini
+
+# --- セキュリティ・バックアップ ---
+# もし秘密情報を含む環境変数などがあれば
+.env
+
+# --- 個人情報 ---
+30_Secure
