@@ -287,7 +287,7 @@ export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:3:hidden:wrap 
 # Aliases
 # ----------------------------------------
 alias ll='ls -alF'
-alias gclone='cd ~/tools/git && git clone'
+alias gclone='cd ~/Tools/Git && git clone'
 alias gup='find ~/Tools/Git -maxdepth 2 -name .git -type d -execdir git pull --rebase \;'
 alias maintenance='sudo apt update && sudo apt dist-upgrade -y && gup && pipx upgrade-all'
 alias pserv='python3 -m http.server 8000'
