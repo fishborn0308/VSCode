@@ -1,0 +1,56 @@
+# shellcheck disable=all
+[ -n "$TMUX" ] && tmuxsync
+
+if [[ -z "$OUT" ]]; then
+  echo "[!] OUT is empty"
+  return 1
+fi
+
+local base=""
+local init_base=""
+local file=""
+local output=""
+
+if [[ -n "$INIT_SCAN_SOURCE" ]]; then
+  init_base="${INIT_SCAN_SOURCE%.nmap}"
+fi
+
+if [[ -n "$init_base" && -f "${init_base}.nmap" ]]; then
+  base="$init_base"
+elif [[ -f "$OUT/nmap_initial.nmap" ]]; then
+  base="$OUT/nmap_initial"
+elif [[ -f "$OUT/nmap_top1000.nmap" ]]; then
+  base="$OUT/nmap_top1000"
+elif [[ -f "$OUT/nmap_full_fallback.nmap" ]]; then
+  base="$OUT/nmap_full_fallback"
+else
+  echo "[!] No usable initial scan result found"
+  echo "    Checked:"
+  echo "    - $OUT/nmap_initial.nmap"
+  echo "    - $OUT/nmap_top1000.nmap"
+  echo "    - $OUT/nmap_full_fallback.nmap"
+  return 1
+fi
+
+file="${base}.nmap"
+output=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file" | sed 's/  */ /g')
+
+if [[ -z "$output" ]]; then
+  echo "[!] No open ports found in: $file"
+  return 1
+fi
+
+echo "#### Initial"
+echo '```text'
+printf '%s\n' "$output"
+echo '```'
+
+if command -v xclip >/dev/null 2>&1; then
+  printf '%s\n' "$output" | tee /dev/tty | xclip -selection clipboard > /dev/null
+  echo "[+] Copied to clipboard"
+else
+  printf '%s\n' "$output"
+  echo "[!] xclip not found"
+fi
+
+echo "[+] Source: $file"

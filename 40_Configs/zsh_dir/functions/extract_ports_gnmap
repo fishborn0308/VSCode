@@ -1,0 +1,9 @@
+# shellcheck disable=all
+local file="$1"
+
+[[ ! -f "$file" ]] && return 1
+
+grep -oE '[0-9]+/open' "$file" \
+  | cut -d/ -f1 \
+  | sort -n -u \
+  | paste -sd, -

@@ -1,0 +1,4 @@
+# shellcheck disable=all
+ports-init || return 1
+echo
+ports-serv || return 1

@@ -1,0 +1,10 @@
+# shellcheck disable=all
+if [[ -z "$TARGET_IP" || -z "$OUT" ]]; then
+  echo "[!] TARGET not set"
+  return 1
+fi
+
+mkdir -p "$OUT"
+echo "[*] UDP full scan (full ports)"
+sudo nmap -sU -Pn -n -p- "$TARGET_IP" \
+  -oA "$OUT/nmap_udp_full"

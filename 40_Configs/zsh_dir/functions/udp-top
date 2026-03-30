@@ -1,0 +1,11 @@
+# shellcheck disable=all
+if [[ -z "$TARGET_IP" || -z "$OUT" ]]; then
+  echo "[!] TARGET not set"
+  return 1
+fi
+
+mkdir -p "$OUT"
+echo "[*] UDP top-100 scan (top-100 ports)"
+sudo nmap -sU -Pn -n --top-ports 100 "$TARGET_IP" \
+  --max-retries 2 --max-rate 1000 \
+  -oA "$OUT/nmap_udp_top100"

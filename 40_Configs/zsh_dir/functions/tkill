@@ -1,0 +1,21 @@
+# shellcheck disable=all
+local session=""
+local sessions=""
+
+sessions=$(tmux list-sessions -F '#S' 2>/dev/null) || {
+  echo "[!] No tmux sessions found"
+  return 1
+}
+
+if command -v fzf >/dev/null 2>&1; then
+  session=$(printf '%s\n' "$sessions" | fzf --prompt="kill session > ")
+else
+  printf '%s\n' "$sessions"
+  echo -n "Kill session: "
+  read session
+fi
+
+[[ -z "$session" ]] && return 1
+
+tmux kill-session -t "$session"
+echo "[+] Killed: $session"

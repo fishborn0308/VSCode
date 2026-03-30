@@ -1,0 +1,27 @@
+# shellcheck disable=all
+command -v fzf >/dev/null 2>&1 || {
+  echo "[!] fzf not found"
+  return 1
+}
+
+[[ -d "$WORDLISTS" || -d "$SECLISTS" ]] || {
+  echo "[!] WORDLISTS / SECLISTS not found"
+  return 1
+}
+
+local link_name="wordlist"
+local selected_list
+
+selected_list=$(find "$WORDLISTS" "$SECLISTS" -maxdepth 4 -type f 2>/dev/null | fzf \
+  --prompt="Select Wordlist > " \
+  --preview="echo '[ PATH: {} ]'; echo '[ SIZE: ' \$(wc -l < {} 2>/dev/null) ' lines ]'; echo '------------------'; head -n 15 {}")
+
+if [[ -n "$selected_list" ]]; then
+  ln -sfn "$selected_list" "$link_name"
+  ACTIVE_DICT=$(basename "$selected_list")
+  export ACTIVE_DICT
+  echo "[+] Linked: $selected_list -> $link_name"
+  echo "[*] Exported: ACTIVE_DICT=$ACTIVE_DICT"
+else
+  echo "[*] No list selected"
+fi

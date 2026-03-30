@@ -1,0 +1,16 @@
+# shellcheck disable=all
+if ip link show ligolo >/dev/null 2>&1; then
+  echo "[*] TUN interface 'ligolo' already exists"
+else
+  sudo ip tuntap add user "$USER" mode tun ligolo || {
+    echo "[!] Failed to create TUN interface 'ligolo'"
+    return 1
+  }
+fi
+
+sudo ip link set ligolo up || {
+  echo "[!] Failed to bring 'ligolo' up"
+  return 1
+}
+
+echo "[+] TUN interface 'ligolo' is UP."

@@ -1,0 +1,13 @@
+# shellcheck disable=all
+if [[ -z "$TARGET_IP" || -z "$OUT" ]]; then
+  echo "[!] TARGET not set"
+  return 1
+fi
+
+mkdir -p "$OUT"
+local ports="53,67,68,69,123,137,138,161,162,500,1900,4500,5355"
+echo "[*] UDP fast scan (high-value ports)"
+
+sudo nmap -sU -Pn -n -p "$ports" \
+  --max-retries 1 --max-rate 2000 --host-timeout 60s \
+  -oA "$OUT/nmap_udp_fast" "$TARGET_IP"

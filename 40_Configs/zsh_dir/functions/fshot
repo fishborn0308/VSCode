@@ -1,0 +1,32 @@
+# shellcheck disable=all
+[[ -z "$ASSETS" ]] && {
+  echo "[!] ASSETS is empty. Run: target <IP> [NAME]"
+  return 1
+}
+
+mkdir -p "$ASSETS"
+
+local before after fullpath rel
+before=$(ls -t "$ASSETS" 2>/dev/null | head -n 1)
+
+flameshot gui --path "$ASSETS"
+
+after=$(ls -t "$ASSETS" 2>/dev/null | head -n 1)
+
+[[ -z "$after" || "$before" == "$after" ]] && {
+  echo "[!] Screenshot not saved"
+  return 1
+}
+
+fullpath="$ASSETS/$after"
+rel="assets/$after"
+
+if command -v xclip >/dev/null 2>&1; then
+  echo "![[${rel}]]" | xclip -selection clipboard
+  echo "[+] Copied (Obsidian): ![[${rel}]]"
+else
+  echo "[!] xclip not found"
+  echo "[+] Obsidian: ![[${rel}]]"
+fi
+
+echo "[+] Saved: $fullpath"

@@ -1,0 +1,63 @@
+# shellcheck disable=all
+local current_target_dir="$TARGET_DIR"
+local current_session=""
+local current_is_target=0
+local sessions=""
+local s=""
+local v=""
+
+# --- hosts cleanup ---
+sudo sed -i '/# TARGET$/d' /etc/hosts
+
+# --- target dir 配下にいるなら退避 ---
+if [[ -n "$current_target_dir" && ( "$PWD" == "$current_target_dir" || "$PWD" == "$current_target_dir"/* ) ]]; then
+  cd ~ || return 1
+fi
+
+# --- 現在の tmux session を把握 ---
+if [[ -n "$TMUX" ]]; then
+  current_session=$(tmux display-message -p '#S' 2>/dev/null)
+
+  if [[ -n "$current_session" ]]; then
+    if tmux show-environment -t "$current_session" TARGET_SESSION 2>/dev/null | grep -q '^TARGET_SESSION=1$'; then
+      current_is_target=1
+    fi
+  fi
+fi
+
+# --- target 系 tmux session を削除（今いる session は最後） ---
+sessions=$(tmux list-sessions -F '#S' 2>/dev/null)
+
+if [[ -n "$sessions" ]]; then
+  while IFS= read -r s; do
+    [[ -z "$s" ]] && continue
+
+    if tmux show-environment -t "$s" TARGET_SESSION 2>/dev/null | grep -q '^TARGET_SESSION=1$'; then
+      [[ "$s" == "$current_session" ]] && continue
+      tmux kill-session -t "$s"
+      echo "[*] Killed tmux session: $s"
+    fi
+  done <<< "$sessions"
+fi
+
+# --- 現在 session の tmux environment もクリア ---
+if [[ -n "$current_session" ]]; then
+  for v in TARGET_IP TARGET_NAME TARGET_DIR workdir OUT LOG ASSETS INIT_SCAN_SOURCE INIT_PORTS TARGET_SESSION; do
+    tmux set-environment -r -t "$current_session" "$v" 2>/dev/null
+  done
+fi
+
+# --- current_assets cleanup ---
+rm -f "$HOME/Vault/Target/current_assets" 2>/dev/null
+
+# --- 現在 shell の target 環境をクリア ---
+unset TARGET_IP TARGET_NAME TARGET_DIR workdir OUT LOG ASSETS INIT_SCAN_SOURCE INIT_PORTS
+
+# --- 今いる tmux session 自体が target session なら最後に落とす ---
+if [[ "$current_is_target" -eq 1 && -n "$current_session" ]]; then
+  echo "[*] Killing current tmux session: $current_session"
+  tmux kill-session -t "$current_session"
+  return 0
+fi
+
+echo "[!] All target contexts cleared."

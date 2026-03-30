@@ -1,0 +1,85 @@
+# shellcheck disable=all
+[ -n "$TMUX" ] && tmuxsync
+
+if [ -z "$TARGET_IP" ] || [ -z "$OUT" ] || [ -z "$LOG" ]; then
+  echo "[!] TARGET_IP / OUT / LOG is empty"
+  echo "    Run: target <IP> [NAME]"
+  return 1
+fi
+
+mkdir -p "$OUT" "$LOG"
+
+echo "[*] TARGET_IP=$TARGET_IP"
+echo "[*] OUT=$OUT"
+
+rm -f "$OUT"/nmap_initial.{nmap,gnmap,xml} \
+      "$OUT"/nmap_top1000.{nmap,gnmap,xml} \
+      "$OUT"/nmap_full_fallback.{nmap,gnmap,xml}
+
+local ports=""
+local init_source=""
+local session=""
+local choice="n"
+
+echo "[*] Rustscan fast scan..."
+rustscan -a "$TARGET_IP" -t 2000 --ulimit 5000 -- -Pn -n -oA "$OUT/nmap_initial"
+
+ports=$(extract_ports_gnmap "$OUT/nmap_initial.gnmap")
+
+if [ -n "$ports" ]; then
+  init_source="$OUT/nmap_initial"
+  echo "[+] Open ports (rustscan): $ports"
+else
+  echo "[!] Rustscan unreliable → fallback to nmap top-ports"
+  nmap -Pn -n --top-ports 1000 "$TARGET_IP" -oA "$OUT/nmap_top1000"
+
+  ports=$(extract_ports_gnmap "$OUT/nmap_top1000.gnmap")
+
+  if [ -n "$ports" ]; then
+    init_source="$OUT/nmap_top1000"
+    echo "[+] Open ports (fallback): $ports"
+  else
+    echo "[!] No ports found → running full scan fallback (slow)"
+    nmap -Pn -n -p- "$TARGET_IP" -oA "$OUT/nmap_full_fallback"
+
+    ports=$(extract_ports_gnmap "$OUT/nmap_full_fallback.gnmap")
+
+    if [ -n "$ports" ]; then
+      init_source="$OUT/nmap_full_fallback"
+      echo "[+] Open ports (full fallback): $ports"
+    else
+      echo "[!] No open ports found at all"
+      return 1
+    fi
+  fi
+fi
+
+export INIT_SCAN_SOURCE="$init_source"
+export INIT_PORTS="$ports"
+
+if [ -n "$TMUX" ]; then
+  session=$(tmux display-message -p '#S' 2>/dev/null)
+  if [ -n "$session" ]; then
+    tmux set-environment -t "$session" INIT_SCAN_SOURCE "$INIT_SCAN_SOURCE"
+    tmux set-environment -t "$session" INIT_PORTS "$INIT_PORTS"
+  fi
+fi
+
+echo "[*] Running service scan on: $ports"
+nmap -Pn -n -sC -sV -p "$ports" "$TARGET_IP" -oA "$OUT/nmap_service"
+
+if [[ -t 0 ]]; then
+  echo -n "[?] Start background full port scan (-p-)? [y/N]: "
+  read -q choice
+  echo ""
+fi
+
+if [[ "$choice" =~ ^[Yy]$ ]]; then
+  echo "[*] Starting full port scan in background..."
+  nohup nmap -Pn -n -p- "$TARGET_IP" \
+    -oA "$OUT/nmap_full" \
+    > "$LOG/nmap_full.log" 2>&1 &
+  echo "[+] Background full scan started"
+else
+  echo "[*] Background full scan skipped"
+fi

@@ -1,0 +1,100 @@
+# shellcheck disable=all
+local ip="$1"
+local name="$2"
+local vault_base="$HOME/Vault/Target"
+
+if [[ -z "$ip" ]]; then
+  echo "[!] Usage: targettmux <IP> [NAME]"
+  return 1
+fi
+
+# target 側と揃えて軽く整形
+if [[ -n "$name" ]]; then
+  name="${name// /-}"
+  name="${name//[^a-zA-Z0-9._-]/}"
+fi
+
+local target_dir="$vault_base/$ip"
+local out_dir="$target_dir/result"
+local log_dir="$target_dir/log"
+local assets_dir="$target_dir/assets"
+
+mkdir -p "$assets_dir" "$target_dir/result/autorecon" "$log_dir"
+ln -sfn "$HOME/Workbench" "$target_dir/Workbench"
+
+# --- session 名生成 ---
+local last_octet="${ip##*.}"
+local third_octet
+third_octet=$(echo "$ip" | awk -F. '{print $(NF-1)}')
+
+local safe_name=""
+if [[ -n "$name" ]]; then
+  safe_name="${name// /_}"
+  safe_name="${safe_name//[^a-zA-Z0-9_-]/}"
+fi
+
+local session=""
+if [[ -n "$safe_name" ]]; then
+  session="${safe_name}_${last_octet}"
+else
+  session="t_${third_octet}_${last_octet}"
+fi
+
+# --- 既存 session ---
+if tmux has-session -t "$session" 2>/dev/null; then
+  echo "[*] Attaching: $session"
+  if [[ -n "$TMUX" ]]; then
+    tmux switch-client -t "$session"
+  else
+    tmux attach-session -t "$session"
+  fi
+  return 0
+fi
+
+echo "[*] Creating session: $session"
+
+# --- 新規 session ---
+tmux new-session -d -s "$session" -c "$target_dir"
+
+# --- session 環境変数 ---
+tmux set-environment -t "$session" TARGET_IP "$ip"
+tmux set-environment -t "$session" TARGET_NAME "$name"
+tmux set-environment -t "$session" TARGET_DIR "$target_dir"
+tmux set-environment -t "$session" workdir "$target_dir"
+tmux set-environment -t "$session" OUT "$out_dir"
+tmux set-environment -t "$session" LOG "$log_dir"
+tmux set-environment -t "$session" ASSETS "$assets_dir"
+tmux set-environment -t "$session" INIT_SCAN_SOURCE ""
+tmux set-environment -t "$session" INIT_PORTS ""
+tmux set-environment -t "$session" TARGET_SESSION "1"
+
+tmux set-option -t "$session" -gq @logging-path "$log_dir"
+
+# --- pane 構成 ---
+tmux split-window -h -t "$session" -c "$HOME/Workbench"
+tmux split-window -v -t "$session:0.1" -c "$target_dir"
+
+# pane:
+# 0: 左     (scan)
+# 1: 右上   (enum)
+# 2: 右下   (notes)
+
+# --- 左: scan ---
+tmux send-keys -t "$session:0.0" "target ${(q)ip}${name:+ ${(q)name}}" C-m
+
+# --- 右上: enum ---
+tmux send-keys -t "$session:0.1" "export TARGET_IP=${(q)ip} TARGET_NAME=${(q)name} TARGET_DIR=${(q)target_dir} workdir=${(q)target_dir} OUT=${(q)out_dir} LOG=${(q)log_dir} ASSETS=${(q)assets_dir} INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
+tmux send-keys -t "$session:0.1" "cd ${(q)$HOME}/Workbench" C-m
+
+# --- 右下: notes ---
+tmux send-keys -t "$session:0.2" "export TARGET_IP=${(q)ip} TARGET_NAME=${(q)name} TARGET_DIR=${(q)target_dir} workdir=${(q)target_dir} OUT=${(q)out_dir} LOG=${(q)log_dir} ASSETS=${(q)assets_dir} INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
+tmux send-keys -t "$session:0.2" "cd ${(q)target_dir}" C-m
+
+# --- active pane ---
+tmux select-pane -t "$session:0.0"
+
+if [[ -n "$TMUX" ]]; then
+  tmux switch-client -t "$session"
+else
+  tmux attach-session -t "$session"
+fi

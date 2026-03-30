@@ -1,0 +1,24 @@
+# shellcheck disable=all
+[ -n "$TMUX" ] && tmuxsync
+
+[[ -z "$TARGET_IP" || -z "$OUT" || -z "$LOG" ]] && {
+  echo "[!] TARGET_IP / OUT / LOG is empty"
+  echo "    Run: target <IP> [NAME]"
+  return 1
+}
+
+local full_log="$LOG/nmap_full.log"
+local full_nmap="$OUT/nmap_full.nmap"
+
+if pgrep -af "nmap .* -p- .*${TARGET_IP}" >/dev/null 2>&1; then
+  echo "[*] Full scan is still running"
+  [ -f "$full_log" ] && tail -n 20 "$full_log"
+  return 1
+fi
+
+[[ ! -f "$full_nmap" ]] && {
+  echo "[!] Full scan result not found: $full_nmap"
+  return 1
+}
+
+~/Tools/Shell/log2obsidian.sh full

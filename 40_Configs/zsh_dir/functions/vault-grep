@@ -1,0 +1,7 @@
+# shellcheck disable=all
+[[ -z "$1" ]] && {
+  echo "Usage: vault-grep <pattern>"
+  return 1
+}
+
+grep -r --color=always -E "$1" ~/Vault/Target/

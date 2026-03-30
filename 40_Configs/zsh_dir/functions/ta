@@ -1,0 +1,55 @@
+# shellcheck disable=all
+local query="$1"
+local session=""
+local sessions=""
+local matches=""
+
+sessions=$(tmux list-sessions -F '#S' 2>/dev/null) || {
+  echo "[!] No tmux sessions found"
+  return 1
+}
+
+# 引数なし: 選択
+if [[ -z "$query" ]]; then
+  if command -v fzf >/dev/null 2>&1; then
+    session=$(printf '%s\n' "$sessions" | fzf --prompt="tmux session > ")
+  else
+    printf '%s\n' "$sessions"
+    echo -n "Session name: "
+    read session
+  fi
+
+  [[ -z "$session" ]] && return 1
+else
+  # 完全一致優先
+  if printf '%s\n' "$sessions" | grep -Fxq "$query"; then
+    session="$query"
+  else
+    matches=$(printf '%s\n' "$sessions" | grep -i -- "$query")
+
+    if [[ -z "$matches" ]]; then
+      echo "[!] No matching tmux session: $query"
+      return 1
+    fi
+
+    if [[ "$(printf '%s\n' "$matches" | wc -l)" -eq 1 ]]; then
+      session="$matches"
+    else
+      if command -v fzf >/dev/null 2>&1; then
+        session=$(printf '%s\n' "$matches" | fzf --prompt="match > ")
+      else
+        echo "[!] Multiple matches:"
+        printf '%s\n' "$matches"
+        return 1
+      fi
+    fi
+  fi
+fi
+
+[[ -z "$session" ]] && return 1
+
+if [[ -n "$TMUX" ]]; then
+  tmux switch-client -t "$session"
+else
+  tmux attach-session -t "$session"
+fi

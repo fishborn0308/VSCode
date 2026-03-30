@@ -1,0 +1,38 @@
+# shellcheck disable=all
+local session="infra"
+
+if tmux has-session -t "$session" 2>/dev/null; then
+  echo "[*] Attaching: $session"
+  if [ -n "$TMUX" ]; then
+    tmux switch-client -t "$session"
+  else
+    tmux attach-session -t "$session"
+  fi
+  return
+fi
+
+echo "[*] Creating infra session"
+
+mkdir -p "$HOME/Transfer"
+
+tmux new-session -d -s "$session" -c "$HOME"
+
+tmux split-window -h -t "$session" -c "$HOME/Transfer"
+tmux split-window -v -t "$session:0.1" -c "$HOME/Transfer"
+
+# pane 0: VPN / monitor
+tmux send-keys -t "$session:0.0" "echo '[VPN / Monitor]'" C-m
+
+# pane 1: server
+tmux send-keys -t "$session:0.1" "echo '[HTTP / Server]'" C-m
+
+# pane 2: transfer
+tmux send-keys -t "$session:0.2" "echo '[Payload / Transfer]'" C-m
+
+tmux select-pane -t "$session:0.0"
+
+if [ -n "$TMUX" ]; then
+  tmux switch-client -t "$session"
+else
+  tmux attach-session -t "$session"
+fi

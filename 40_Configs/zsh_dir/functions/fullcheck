@@ -1,0 +1,63 @@
+# shellcheck disable=all
+[[ -n "$TMUX" ]] && tmuxsync
+
+if [[ -z "$TARGET_IP" || -z "$OUT" || -z "$LOG" ]]; then
+  echo "[!] TARGET_IP / OUT / LOG is empty"
+  echo "    Run: target <IP> [NAME]"
+  return 1
+fi
+
+local full_base="$OUT/nmap_full"
+local full_log="$LOG/nmap_full.log"
+local full_nmap="${full_base}.nmap"
+local init_nmap=""
+local delta=""
+local target_re
+
+target_re=$(printf '%s\n' "$TARGET_IP" | sed 's/[.[\*^$()+?{|]/\\&/g')
+
+if [[ -n "$INIT_SCAN_SOURCE" ]]; then
+  init_nmap="${INIT_SCAN_SOURCE%.nmap}.nmap"
+fi
+
+if pgrep -af -- "nmap .* -p- .*${target_re}" >/dev/null 2>&1; then
+  echo "[*] Full scan is still running for $TARGET_IP"
+  echo "[*] Last 10 lines of progress:"
+  if [[ -f "$full_log" ]]; then
+    tail -n 10 "$full_log"
+    echo "----------------------------------------"
+    pkill -HUP -f -- "nmap .* -p- .*${target_re}"
+    sleep 0.5
+  else
+    echo "[!] Log file not found: $full_log"
+  fi
+  return 2
+fi
+
+if [[ ! -f "$full_nmap" ]]; then
+  echo "[!] Full scan result not found: $full_nmap"
+  return 1
+fi
+
+echo "[*] Full scan completed"
+echo "----------------------------------------"
+echo "[+] Open ports (full):"
+grep -E '^[0-9]+/(tcp|udp)\s+open' "$full_nmap"
+
+if [[ -n "$init_nmap" && -f "$init_nmap" ]]; then
+  delta=$(comm -13 \
+    <(grep -E '^[0-9]+/(tcp|udp)\s+open' "$init_nmap" | cut -d/ -f1 | sort -un) \
+    <(grep -E '^[0-9]+/(tcp|udp)\s+open' "$full_nmap" | cut -d/ -f1 | sort -un)
+  )
+
+  echo ""
+  echo "[+] Delta (New ports found in full scan):"
+  if [[ -n "$delta" ]]; then
+    echo "$delta" | sed 's/^/  -> /'
+  else
+    echo "  None (No new ports)"
+  fi
+else
+  echo ""
+  echo "[!] Initial scan source not found, skipping delta check"
+fi

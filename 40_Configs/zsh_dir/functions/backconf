@@ -1,0 +1,30 @@
+# shellcheck disable=all
+local base="$HOME/Vault/Cursor/40_Configs"
+local ts
+ts=$(date +%Y-%m-%d_%H-%M-%S)
+
+local dest="$base/$ts"
+
+mkdir -p "$dest" || return 1
+
+echo "[*] Backing up configs -> $dest"
+
+[[ -f "$HOME/.zshrc" ]] && cp -a "$HOME/.zshrc" "$dest/.zshrc"
+[[ -d "$HOME/.zsh" ]] && cp -a "$HOME/.zsh" "$dest/.zsh"
+[[ -f "$HOME/.tmux.conf" ]] && cp -a "$HOME/.tmux.conf" "$dest/.tmux.conf"
+[[ -f "$HOME/.config/kitty/kitty.conf" ]] && cp -a "$HOME/.config/kitty/kitty.conf" "$dest/kitty.conf"
+
+cat > "$dest/README.txt" <<EOF
+Backup created: $ts
+
+Included:
+- $HOME/.zshrc
+- $HOME/.zsh/
+- $HOME/.tmux.conf
+- $HOME/.config/kitty/kitty.conf
+EOF
+
+ln -sfn "$dest" "$base/latest"
+
+echo "[+] Backup completed"
+echo "[+] Latest -> $base/latest"

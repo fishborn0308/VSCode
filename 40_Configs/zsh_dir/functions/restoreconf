@@ -1,0 +1,66 @@
+# shellcheck disable=all
+local base="$HOME/Vault/Cursor/40_Configs"
+local pick="$1"
+local src=""
+
+if [[ -n "$pick" ]]; then
+  src="$base/$pick"
+else
+  src="$base/latest"
+fi
+
+if [[ ! -e "$src" ]]; then
+  echo "[!] Backup source not found: $src"
+  echo "    Usage: restoreconf [snapshot_name]"
+  return 1
+fi
+
+if [[ -L "$src" ]]; then
+  src=$(readlink -f "$src")
+fi
+
+local ts
+ts=$(date +%Y-%m-%d_%H-%M-%S)
+
+local backup="$HOME/.config_backup/$ts"
+mkdir -p "$backup" || return 1
+
+echo "[*] Backing up current configs -> $backup"
+
+[[ -f "$HOME/.zshrc" ]] && cp -a "$HOME/.zshrc" "$backup/.zshrc"
+[[ -d "$HOME/.zsh" ]] && cp -a "$HOME/.zsh" "$backup/.zsh"
+[[ -f "$HOME/.tmux.conf" ]] && cp -a "$HOME/.tmux.conf" "$backup/.tmux.conf"
+[[ -f "$HOME/.config/kitty/kitty.conf" ]] && cp -a "$HOME/.config/kitty/kitty.conf" "$backup/kitty.conf"
+
+echo "[*] Restoring configs from $src"
+
+if [[ -f "$src/.zshrc" ]]; then
+  cp -a "$src/.zshrc" "$HOME/.zshrc"
+else
+  echo "[!] Missing in backup: $src/.zshrc"
+fi
+
+if [[ -d "$src/.zsh" ]]; then
+  rm -rf "$HOME/.zsh"
+  cp -a "$src/.zsh" "$HOME/.zsh"
+else
+  echo "[!] Missing in backup: $src/.zsh"
+fi
+
+if [[ -f "$src/.tmux.conf" ]]; then
+  cp -a "$src/.tmux.conf" "$HOME/.tmux.conf"
+else
+  echo "[!] Missing in backup: $src/.tmux.conf"
+fi
+
+if [[ -f "$src/kitty.conf" ]]; then
+  mkdir -p "$HOME/.config/kitty"
+  cp -a "$src/kitty.conf" "$HOME/.config/kitty/kitty.conf"
+else
+  echo "[!] Missing in backup: $src/kitty.conf"
+fi
+
+echo "[+] Restore completed"
+echo "[!] Current backup saved: $backup"
+echo "[!] Reload zsh: source ~/.zshrc"
+echo "[!] Reload tmux: tmux source-file ~/.tmux.conf"

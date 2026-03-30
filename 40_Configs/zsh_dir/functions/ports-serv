@@ -1,0 +1,38 @@
+# shellcheck disable=all
+[ -n "$TMUX" ] && tmuxsync
+
+if [[ -z "$OUT" ]]; then
+  echo "[!] OUT is empty"
+  return 1
+fi
+
+local file="$OUT/nmap_service.nmap"
+local output
+
+if [[ ! -f "$file" ]]; then
+  echo "[!] File not found: $file"
+  return 1
+fi
+
+output=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file" | sed 's/  */ /g')
+
+if [[ -z "$output" ]]; then
+  echo "[!] No open ports found in: $file"
+  return 1
+fi
+
+echo "#### Service Scan"
+echo '```text'
+printf '%s\n' "$output"
+echo '```'
+
+if command -v xclip >/dev/null 2>&1; then
+  if [[ -t 1 ]]; then
+    printf '%s\n' "$output" | tee /dev/tty | xclip -selection clipboard > /dev/null
+  else
+    printf '%s\n' "$output" | xclip -selection clipboard > /dev/null
+  fi
+  echo "[+] Copied to clipboard"
+fi
+
+echo "[+] Source: $file"

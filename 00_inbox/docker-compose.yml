@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  # ターゲット1: Metasploitable2 (ネットワーク攻撃の宝庫)
+  # ポート指定なし = コンテナ内の全ポート(21, 22, 23, 25, 80, 445, 3306, 6667等)が開放状態
+  target-meta:
+    image: tleemcjr/metasploitable2
+    container_name: lab-full-meta
+    tty: true # ← これを追加（仮想端末を割り当てる）
+    stdin_open: true
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.100
+
+  # ターゲット2: OWASP Juice Shop (モダンWeb/API)
+  target-juice:
+    image: bkimminich/juice-shop
+    container_name: lab-full-juice
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.101
+
+  # ターゲット3: DVWA (クラシックWeb/PHP)
+  target-dvwa:
+    image: vulnerables/web-dvwa
+    container_name: lab-full-dvwa
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.102
+
+  # WordPress環境
+  target-wp:
+    image: wordpress:latest
+    container_name: lab-wordpress
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.110
+    environment:
+      WORDPRESS_DB_HOST: db-wp
+      WORDPRESS_DB_PASSWORD: password
+
+  db-wp:
+    image: mysql:5.7
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.111
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+
+  # Java WebGoat (ポート8080)
+  target-webgoat:
+    image: webgoat/webgoat
+    container_name: lab-webgoat
+    environment:
+      - JAVA_OPTS=-Xms1024m -Xmx2048m
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.120
+
+networks:
+  pentest_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/24

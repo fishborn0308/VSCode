@@ -1,0 +1,141 @@
+# shellcheck disable=all
+[ -n "$TMUX" ] && tmuxsync
+
+if [ -z "$OUT" ]; then
+  echo "[!] OUT is empty"
+  return 1
+fi
+
+local file="$OUT/nmap_service.nmap"
+local open_lines
+
+if [ ! -f "$file" ]; then
+  echo "[!] File not found: $file"
+  echo "    Run service scan first"
+  return 1
+fi
+
+open_lines=$(grep -E '^[0-9]+/(tcp|udp)\s+open' "$file")
+
+if [ -z "$open_lines" ]; then
+  echo "[!] No open service lines found in: $file"
+  return 1
+fi
+
+echo "======= NEXT ACTION (SERVICE) ======="
+echo "[*] Source: $file"
+echo
+
+if printf '%s\n' "$open_lines" | grep -Eqi 'http|https'; then
+  echo "[WEB]"
+  echo "  → title / tech / login / upload / API"
+  echo "  → ffuf / gobuster / vhost"
+
+  grep -qi 'apache' "$file" && echo "  → Apache: CGI / misconfig / default files"
+  grep -qi 'nginx' "$file" && echo "  → Nginx: proxy / config / hidden paths"
+  grep -qi 'iis' "$file" && echo "  → IIS: ASP.NET / shortname / web.config"
+  grep -qi 'tomcat' "$file" && echo "  → Tomcat: manager / WAR deploy / default creds"
+  grep -qi 'jetty' "$file" && echo "  → Jetty: admin / debug / Java app surface"
+  grep -qiE 'https|ssl|tls' "$file" && echo "  → SSL: cert CN/SAN / subdomain / TLS config"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qiE 'microsoft-ds|netbios|smb'; then
+  echo "[SMB]"
+  echo "  → enum4linux-ng / smbclient"
+  echo "  → anonymous / shares / users"
+  grep -qi 'signing' "$file" && echo "  → check SMB signing"
+  grep -qi 'samba' "$file" && echo "  → Samba version / known vulns / writable share"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qiE 'ldap|kerberos'; then
+  echo "[AD / LDAP / KERBEROS]"
+  echo "  → ldapsearch / kerbrute / enum"
+  echo "  → users / domain / AS-REP / password policy"
+  grep -qi 'kerberos' "$file" && echo "  → check AS-REP roast / user enum"
+  grep -qi 'ldap' "$file" && echo "  → check naming contexts / anonymous bind"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'winrm'; then
+  echo "[WINRM]"
+  echo "  → evil-winrm (when creds available)"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'ms-wbt-server'; then
+  echo "[RDP]"
+  echo "  → xfreerdp / creds / NLA"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'ssh'; then
+  echo "[SSH]"
+  echo "  → creds / keys / version"
+  echo "  → usually lower priority unless creds exist"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'telnet'; then
+  echo "[TELNET]"
+  echo "  → manual login check first"
+  echo "  → default / weak creds"
+  echo "  → inspect banner / prompt"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'ftp'; then
+  echo "[FTP]"
+  echo "  → anonymous / ls / get / put"
+  echo "  → writable upload check"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'smtp'; then
+  echo "[SMTP]"
+  echo "  → user enum / VRFY / EXPN"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'mysql'; then
+  echo "[MYSQL]"
+  echo "  → creds / anonymous / local file / version"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'postgresql'; then
+  echo "[POSTGRESQL]"
+  echo "  → creds / db enum / role check"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'mongodb'; then
+  echo "[MONGODB]"
+  echo "  → no-auth / db list / dump"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'redis'; then
+  echo "[REDIS]"
+  echo "  → unauth / config / file write"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'elasticsearch'; then
+  echo "[ELASTICSEARCH]"
+  echo "  → unauth API / indices / data leak"
+  echo
+fi
+
+if printf '%s\n' "$open_lines" | grep -qi 'docker'; then
+  echo "[DOCKER]"
+  echo "  → Docker API exposure / container escape surface"
+  echo
+fi
+
+echo "-------------------------------------"
+echo "[*] Notes:"
+echo "  → update Notes / Next Actions in Obsidian"
+echo "  → compare with full scan later"
+echo "====================================="
