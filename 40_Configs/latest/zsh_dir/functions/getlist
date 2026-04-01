@@ -12,7 +12,7 @@ command -v fzf >/dev/null 2>&1 || {
 local link_name="wordlist"
 local selected_list
 
-selected_list=$(find "$WORDLISTS" "$SECLISTS" -maxdepth 4 -type f 2>/dev/null | fzf \
+selected_list=$(find -L "$WORDLISTS" "$SECLISTS" -maxdepth 4 -type f 2>/dev/null | fzf \
   --prompt="Select Wordlist > " \
   --preview="echo '[ PATH: {} ]'; echo '[ SIZE: ' \$(wc -l < {} 2>/dev/null) ' lines ]'; echo '------------------'; head -n 15 {}")
 

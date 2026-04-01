@@ -1,0 +1,33 @@
+services:
+  # WAF: OWASP CRS (Nginx版)
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    container_name: lab-waf
+    ports:
+      - "80:80"
+    environment:
+      - PARANOIA=1 # 1(基本)〜4(超厳格)まで調整可能
+      - EXECUTING_RULE_SET=1 # ルールセットを有効化
+      - BACKEND=http://target-juice:3000
+      - MODSEC_RULE_ENGINE=On # Onで遮断、DetectionOnlyで検知のみ
+    volumes:
+      - ./waf-conf/modsecurity.conf:/etc/modsecurity.d/modsecurity.conf:ro
+    networks:
+      pentest_net:
+        ipv4_address: 10.5.0.200
+
+  # ログ解析: Elastic/Kibanaの代わりに軽量な「Grafana + Loki」
+  # これで「どのルール(ID)が何回出たか」をグラフ化できます
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    networks:
+      - pentest_net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - pentest_net

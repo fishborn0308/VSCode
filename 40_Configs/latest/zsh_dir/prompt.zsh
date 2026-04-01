@@ -12,7 +12,7 @@ refresh_oscp_prompt() {
 
   # 3. デフォルトルートのIFを使う
   if [[ -z "$my_ip" ]]; then
-    default_if=$(ip route 2>/dev/null | awk '/^default/ {print $5; exit}')
+    default_if=$(ip route 2>/dev/null | awk '/^default via/ {print $5; exit}')
     [[ -n "$default_if" ]] && my_ip=$(ip -br -4 a show "$default_if" 2>/dev/null | awk '$2=="UP" {print $3}' | cut -d/ -f1)
   fi
 

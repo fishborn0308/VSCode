@@ -80,15 +80,11 @@ tmux split-window -v -t "$session:0.1" -c "$target_dir"
 # 2: 右下   (notes)
 
 # --- 左: scan ---
-tmux send-keys -t "$session:0.0" "target ${(q)ip}${name:+ ${(q)name}}" C-m
-
-# --- 右上: enum ---
-tmux send-keys -t "$session:0.1" "export TARGET_IP=${(q)ip} TARGET_NAME=${(q)name} TARGET_DIR=${(q)target_dir} workdir=${(q)target_dir} OUT=${(q)out_dir} LOG=${(q)log_dir} ASSETS=${(q)assets_dir} INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
-tmux send-keys -t "$session:0.1" "cd ${(q)$HOME}/Workbench" C-m
-
-# --- 右下: notes ---
-tmux send-keys -t "$session:0.2" "export TARGET_IP=${(q)ip} TARGET_NAME=${(q)name} TARGET_DIR=${(q)target_dir} workdir=${(q)target_dir} OUT=${(q)out_dir} LOG=${(q)log_dir} ASSETS=${(q)assets_dir} INIT_SCAN_SOURCE='' INIT_PORTS=''" C-m
-tmux send-keys -t "$session:0.2" "cd ${(q)target_dir}" C-m
+if [[ -n "$name" ]]; then
+  tmux send-keys -t "$session:0.0" "target '$ip' '$name'" C-m
+else
+  tmux send-keys -t "$session:0.0" "target '$ip'" C-m
+fi
 
 # --- active pane ---
 tmux select-pane -t "$session:0.0"
